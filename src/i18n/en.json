@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "Extractr",
+    "subtitle": "Lightweight Extractor"
+  },
+  "drop": {
+    "hint": "Drag archive files here",
+    "click": "or click to choose",
+    "oneAtATime": "Please choose or drop one archive at a time"
+  },
+  "common": {
+    "extract": "Extract",
+    "cancel": "Cancel",
+    "browse": "Browse",
+    "close": "Close",
+    "confirm": "OK",
+    "remove": "Remove",
+    "clear": "Clear finished"
+  },
+  "preview": {
+    "title": "Contents",
+    "items": "{{count}} items",
+    "total": "Total",
+    "encrypted": "Encrypted",
+    "empty": "Drop or choose an archive to preview"
+  },
+  "dest": {
+    "label": "Extract to",
+    "placeholder": "Choose destination folder",
+    "sameDir": "To current folder"
+  },
+  "password": {
+    "title": "Enter password",
+    "placeholder": "This archive is encrypted, enter its password",
+    "wrong": "Password may be wrong, please retry"
+  },
+  "progress": {
+    "extracting": "Extracting",
+    "current": "Current file",
+    "done": "Done",
+    "cancelled": "Cancelled",
+    "error": "Failed",
+    "indeterminate": "In progress"
+  },
+  "queue": {
+    "title": "Tasks",
+    "empty": "No tasks"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "language": "Language",
+    "overwrite": "Overwrite policy",
+    "ow_skip": "Skip existing",
+    "ow_overwrite": "Overwrite",
+    "ow_rename": "Rename",
+    "ow_error": "Error"
+  }
+}

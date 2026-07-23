@@ -1,0 +1,30 @@
+[package]
+name = "archive-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Cross-platform, UI-agnostic archive extraction core (zip/7z/tar/rar/gz/...)"
+
+[features]
+default = []
+# RAR 解压依赖 unrar crate（C++ 编译 RARLab 源码），作为可选 feature
+# 不启用时 rar.rs 不参与编译，其余格式照常工作
+rar = ["dep:unrar"]
+
+[dependencies]
+zip = { workspace = true }
+sevenz-rust2 = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+bzip2 = { workspace = true }
+xz2 = { workspace = true }
+zstd = { workspace = true }
+unrar = { workspace = true, optional = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+zip = { workspace = true }

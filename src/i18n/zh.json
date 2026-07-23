@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "Extractr",
+    "subtitle": "轻量解压工具"
+  },
+  "drop": {
+    "hint": "拖拽压缩文件到此处",
+    "click": "或 点击选择文件",
+    "oneAtATime": "一次只能处理一个压缩包，请单独选择或拖入"
+  },
+  "common": {
+    "extract": "解压",
+    "cancel": "取消",
+    "browse": "浏览",
+    "close": "关闭",
+    "confirm": "确定",
+    "remove": "移除",
+    "clear": "清空已完成"
+  },
+  "preview": {
+    "title": "文件列表",
+    "items": "{{count}} 项",
+    "total": "总大小",
+    "encrypted": "已加密",
+    "empty": "选择或拖入压缩文件后查看内容"
+  },
+  "dest": {
+    "label": "解压到",
+    "placeholder": "选择目标目录",
+    "sameDir": "解压到当前目录"
+  },
+  "password": {
+    "title": "输入密码",
+    "placeholder": "该压缩包已加密，请输入密码",
+    "wrong": "密码可能错误，请重试"
+  },
+  "progress": {
+    "extracting": "正在解压",
+    "current": "当前文件",
+    "done": "解压完成",
+    "cancelled": "已取消",
+    "error": "解压失败",
+    "indeterminate": "进行中"
+  },
+  "queue": {
+    "title": "任务",
+    "empty": "暂无任务"
+  },
+  "settings": {
+    "title": "设置",
+    "theme": "主题",
+    "light": "浅色",
+    "dark": "深色",
+    "language": "语言",
+    "overwrite": "覆盖策略",
+    "ow_skip": "跳过已存在",
+    "ow_overwrite": "覆盖",
+    "ow_rename": "重命名",
+    "ow_error": "报错"
+  }
+}
