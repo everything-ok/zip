@@ -6,6 +6,9 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
+/// 并发解压任务上限。超过则拒绝新任务，防资源耗尽与磁盘抖动。
+pub const MAX_CONCURRENT_TASKS: usize = 3;
+
 pub struct AppState {
     /// task_id -> 取消标志。前端调 `cancel_extraction` 置位。
     pub tasks: Mutex<HashMap<String, Arc<AtomicBool>>>,
@@ -18,16 +21,23 @@ impl AppState {
         }
     }
 
-    /// 注册一个任务令牌。若 task_id 已存在则拒绝，返回已有令牌。
-    /// 返回 `Ok(token)` 表示注册成功；`Err(existing)` 表示重复。
+    /// 注册一个任务令牌。
+    ///
+    /// 返回：
+    /// - `Ok(token)`：注册成功；
+    /// - `Err(RegisterError::Duplicate(existing))`：task_id 已存在；
+    /// - `Err(RegisterError::TooMany(current))`：并发任务已达上限。
     pub async fn register_task(
         &self,
         task_id: &str,
         token: Arc<AtomicBool>,
-    ) -> Result<Arc<AtomicBool>, Arc<AtomicBool>> {
+    ) -> Result<Arc<AtomicBool>, RegisterError> {
         let mut tasks = self.tasks.lock().await;
         if let Some(existing) = tasks.get(task_id) {
-            return Err(existing.clone());
+            return Err(RegisterError::Duplicate(existing.clone()));
+        }
+        if tasks.len() >= MAX_CONCURRENT_TASKS {
+            return Err(RegisterError::TooMany(tasks.len()));
         }
         tasks.insert(task_id.to_string(), token.clone());
         Ok(token)
@@ -50,6 +60,14 @@ impl AppState {
             token.store(true, std::sync::atomic::Ordering::SeqCst);
         }
     }
+}
+
+/// 注册任务失败原因。
+pub enum RegisterError {
+    /// task_id 已存在（旧任务令牌）。
+    Duplicate(Arc<AtomicBool>),
+    /// 并发任务已达上限。
+    TooMany(usize),
 }
 
 impl Default for AppState {

@@ -2,7 +2,13 @@ import { UploadCloud } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 
-export function DropZone({ onFile }: { onFile: (path: string) => void }) {
+export function DropZone({
+  onFile,
+  hovering = false,
+}: {
+  onFile: (path: string) => void;
+  hovering?: boolean;
+}) {
   const { t } = useTranslation();
 
   const pick = async () => {
@@ -35,7 +41,11 @@ export function DropZone({ onFile }: { onFile: (path: string) => void }) {
     <div className="flex flex-1 items-center justify-center p-8">
       <button
         onClick={pick}
-        className="group flex w-full max-w-xl flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-8 py-16 text-center transition-colors hover:border-indigo-400 hover:bg-indigo-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/30"
+        className={`group flex w-full max-w-xl flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-8 py-16 text-center transition-colors ${
+          hovering
+            ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
+            : "border-zinc-300 bg-zinc-50 hover:border-indigo-400 hover:bg-indigo-50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/30"
+        }`}
       >
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 transition-transform group-hover:scale-105 dark:bg-indigo-900/40 dark:text-indigo-300">
           <UploadCloud size={28} />

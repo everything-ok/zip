@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Extractr</title>
+    <script>
+      // 主题尽早应用，避免首屏闪烁。跟随系统模式读取 prefers-color-scheme。
+      (function () {
+        try {
+          var raw = localStorage.getItem("extractr-settings");
+          var theme = "system";
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            theme = parsed?.state?.settings?.theme || "system";
+          }
+          var dark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

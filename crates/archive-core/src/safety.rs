@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::bail;
 
+use crate::error::ArchiveError;
 use crate::types::OverwritePolicy;
 
 static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -17,7 +18,17 @@ static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 ///
 /// `dest_root` 保留在接口中以兼容各 extractor；校验本身没有文件系统副作用。
 /// 它不创建目录、不规范化已有目录，也不吞掉 I/O 错误。
+/// 同时校验总路径长度上限（防超长路径滥用），默认上限见 `ExtractLimits::max_path_len`。
 pub fn sanitize_entry_path(entry: &str, _dest_root: &Path) -> anyhow::Result<PathBuf> {
+    sanitize_entry_path_limited(entry, _dest_root, 4096)
+}
+
+/// 带路径长度上限的净化入口，供 extractor 传入 `ExtractLimits.max_path_len`。
+pub fn sanitize_entry_path_limited(
+    entry: &str,
+    _dest_root: &Path,
+    max_path_len: usize,
+) -> anyhow::Result<PathBuf> {
     if entry.is_empty() {
         bail!("空路径条目");
     }
@@ -43,6 +54,15 @@ pub fn sanitize_entry_path(entry: &str, _dest_root: &Path) -> anyhow::Result<Pat
     }
     if safe.as_os_str().is_empty() {
         bail!("空路径条目: {entry}");
+    }
+    let len = safe.to_string_lossy().len();
+    if len > max_path_len {
+        return Err(ArchiveError::PathTooLong {
+            path: entry.to_string(),
+            len,
+            max: max_path_len,
+        }
+        .into());
     }
     Ok(safe)
 }

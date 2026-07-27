@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Modal } from "./ui";
 import { useAppStore } from "../store/useAppStore";
+import type { ThemeMode } from "../store/useAppStore";
 
 export function SettingsPanel({
   open,
@@ -36,21 +37,18 @@ export function SettingsPanel({
         <Row label={t("settings.theme")}>
           <select
             value={settings.theme}
-            onChange={(e) =>
-              setSettings({ theme: e.target.value as "light" | "dark" })
-            }
+            onChange={(e) => setSettings({ theme: e.target.value as ThemeMode })}
             className={select}
           >
             <option value="light">{t("settings.light")}</option>
             <option value="dark">{t("settings.dark")}</option>
+            <option value="system">{t("settings.system")}</option>
           </select>
         </Row>
         <Row label={t("settings.overwrite")}>
           <select
             value={settings.overwrite}
-            onChange={(e) =>
-              setSettings({ overwrite: e.target.value as never })
-            }
+            onChange={(e) => setSettings({ overwrite: e.target.value as never })}
             className={select}
           >
             <option value="skip">{t("settings.ow_skip")}</option>
@@ -58,6 +56,19 @@ export function SettingsPanel({
             <option value="rename">{t("settings.ow_rename")}</option>
             <option value="error">{t("settings.ow_error")}</option>
           </select>
+        </Row>
+        <Row label={t("settings.autoOpen")}>
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.autoOpenDir}
+              onChange={(e) => setSettings({ autoOpenDir: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              {settings.autoOpenDir ? t("common.on") : t("common.off")}
+            </span>
+          </label>
         </Row>
       </div>
     </Modal>

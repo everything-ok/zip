@@ -51,4 +51,61 @@ pub trait ArchiveExtractor: Send + Sync {
 
     /// 执行解压。通过 `ctx` 拿进度 / 取消。
     fn extract(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary>;
+
+    /// 部分解压：只解压 `entries` 指定的归档内路径集合。
+    /// 默认不支持（流式格式无法随机访问）。`entries` 为空时解压全部。
+    fn extract_entries(
+        &self,
+        _ctx: &ExtractContext,
+        _entries: &[String],
+    ) -> anyhow::Result<ExtractSummary> {
+        Err(crate::error::ArchiveError::Unsupported("该格式不支持部分解压".into()).into())
+    }
+
+    /// 是否支持部分解压（随机访问）。
+    fn supports_partial(&self) -> bool {
+        false
+    }
+}
+
+/// 待加入归档的输入文件/目录条目。
+#[derive(Debug, Clone)]
+pub struct CreateSource {
+    /// 文件系统上的实际路径（文件或目录）。
+    pub fs_path: std::path::PathBuf,
+    /// 归档内的相对路径（目录用 `dir/` 结尾可省略，创建器按是否目录处理）。
+    pub archive_path: String,
+}
+
+/// 创建归档的选项。
+#[derive(Debug, Clone, Default)]
+pub struct CreateOptions {
+    /// 加密密码（仅支持加密的格式生效）。
+    pub password: Option<String>,
+    /// 压缩级别（0=存储，1-9 递增；None 用各格式默认）。
+    pub level: Option<i32>,
+}
+
+/// 创建归档上下文。
+pub struct CreateContext<'a> {
+    /// 输出归档路径。
+    pub dest: &'a Path,
+    /// 源条目列表。
+    pub sources: &'a [CreateSource],
+    pub options: &'a CreateOptions,
+    pub progress: &'a dyn ProgressSink,
+    pub cancel: &'a dyn CancelToken,
+}
+
+/// 创建归档的抽象。与 `ArchiveExtractor` 对偶。
+/// 路径同样经 `safety::sanitize_entry_path` 校验，防注入 `..` 等。
+pub trait ArchiveCreator: Send + Sync {
+    fn format_kind(&self) -> ArchiveFormat;
+
+    fn supports_password(&self) -> bool {
+        false
+    }
+
+    /// 创建归档。返回写入字节数统计。
+    fn create(&self, ctx: &CreateContext) -> anyhow::Result<ExtractSummary>;
 }

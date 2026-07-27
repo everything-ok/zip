@@ -3,10 +3,20 @@
     "title": "Extractr",
     "subtitle": "Lightweight Extractor"
   },
+  "about": {
+    "title": "About",
+    "desc": "Extractr is a lightweight, secure, cross-platform archive extractor supporting ZIP, RAR, 7z, TAR and more.",
+    "featureSafe": "Security: atomic output, Zip Slip guard, bomb protection",
+    "featureFormats": "Formats: ZIP / RAR / 7z / TAR / GZIP / BZIP2 / XZ / Zstd",
+    "featureLight": "Lightweight: system WebView2, installer only a few MB",
+    "featureCross": "Cross-platform: pure-Rust core, reusable for macOS / HarmonyOS"
+  },
   "drop": {
     "hint": "Drag archive files here",
     "click": "or click to choose",
-    "oneAtATime": "Please choose or drop one archive at a time"
+    "oneAtATime": "Please choose or drop one archive at a time",
+    "hovering": "Release to extract",
+    "hoveringHint": "Multiple files supported"
   },
   "common": {
     "extract": "Extract",
@@ -15,24 +25,43 @@
     "close": "Close",
     "confirm": "OK",
     "remove": "Remove",
-    "clear": "Clear finished"
+    "clear": "Clear finished",
+    "clearRecent": "Clear recent",
+    "openDir": "Open folder",
+    "retry": "Retry",
+    "on": "On",
+    "off": "Off"
   },
   "preview": {
     "title": "Contents",
     "items": "{{count}} items",
     "total": "Total",
+    "compressed": "Compressed",
     "encrypted": "Encrypted",
-    "empty": "Drop or choose an archive to preview"
+    "empty": "Drop or choose an archive to preview",
+    "search": "Search filename…",
+    "noMatch": "No matching files",
+    "showAll": "Show all {{count}} items",
+    "colName": "Name",
+    "colSize": "Size",
+    "colRatio": "Ratio",
+    "colModified": "Modified"
   },
   "dest": {
     "label": "Extract to",
     "placeholder": "Choose destination folder",
-    "sameDir": "To current folder"
+    "sameDir": "To current folder",
+    "toCurrent": "To current folder",
+    "toSubdir": "To same-name subfolder",
+    "recent": "Recent"
   },
   "password": {
     "title": "Enter password",
     "placeholder": "This archive is encrypted, enter its password",
-    "wrong": "Password may be wrong, please retry"
+    "wrong": "Password may be wrong, please retry",
+    "show": "Show password",
+    "hide": "Hide password",
+    "remember": "Remember password"
   },
   "progress": {
     "extracting": "Extracting",
@@ -46,16 +75,34 @@
     "title": "Tasks",
     "empty": "No tasks"
   },
+  "err": {
+    "passwordRequired": "Archive is encrypted; password required",
+    "wrongPassword": "Wrong password, please retry",
+    "corrupt": "Archive is corrupt or incomplete",
+    "unsupported": "Unsupported format or feature",
+    "pathTraversal": "Path traversal detected; extraction refused",
+    "pathTooLong": "Entry path too long; refused",
+    "bombDetected": "Zip bomb detected; output exceeds limit",
+    "fileTooLarge": "A single file exceeds the size limit",
+    "tooManyEntries": "Archive has too many entries",
+    "tooManyTasks": "Too many concurrent tasks; wait for some to finish",
+    "duplicateTask": "Task ID already exists",
+    "conflict": "Target file already exists",
+    "cancelled": "Operation cancelled",
+    "io": "Read/write error"
+  },
   "settings": {
     "title": "Settings",
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
+    "system": "System",
     "language": "Language",
     "overwrite": "Overwrite policy",
     "ow_skip": "Skip existing",
     "ow_overwrite": "Overwrite",
     "ow_rename": "Rename",
-    "ow_error": "Error"
+    "ow_error": "Error",
+    "autoOpen": "Auto-open folder after extraction"
   }
 }

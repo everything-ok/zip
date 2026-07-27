@@ -1,16 +1,28 @@
-import { CheckCircle2, XCircle, Loader2, Ban, X } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Ban,
+  X,
+  FolderOpen,
+  RotateCcw,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/useAppStore";
 import { useExtract } from "../hooks/useExtract";
+import { revealInDir } from "../lib/ipc";
+import { describeError } from "../lib/errorMap";
 import { basename, formatBytes, percent } from "../lib/format";
 import { Button } from "./ui";
+import type { OverwritePolicy } from "../lib/types";
 
 export function TaskQueue() {
   const { t } = useTranslation();
   const tasks = useAppStore((s) => s.tasks);
+  const updateTask = useAppStore((s) => s.updateTask);
   const removeTask = useAppStore((s) => s.removeTask);
   const clearFinished = useAppStore((s) => s.clearFinished);
-  const { cancel } = useExtract();
+  const { cancel, retry } = useExtract();
 
   if (tasks.length === 0) return null;
 
@@ -35,28 +47,65 @@ export function TaskQueue() {
           >
             <div className="flex items-center gap-2">
               <StatusIcon status={task.status} />
-              <span className="truncate text-sm text-zinc-800 dark:text-zinc-200">
+              <span className="min-w-0 truncate text-sm text-zinc-800 dark:text-zinc-200">
                 {basename(task.source)}
               </span>
-              <span className="ml-auto flex items-center gap-2">
+              <span className="ml-auto flex items-center gap-1">
                 {task.status === "running" && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => cancel(task.id)}
-                    className="px-2 py-1 text-xs"
-                  >
-                    <Ban size={12} /> {t("common.cancel")}
-                  </Button>
+                  <>
+                    <select
+                      value={task.overwrite ?? "skip"}
+                      onChange={(e) =>
+                        updateTask(task.id, {
+                          overwrite: e.target.value as OverwritePolicy,
+                        })
+                      }
+                      title={t("settings.overwrite")}
+                      className="rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                      <option value="skip">{t("settings.ow_skip")}</option>
+                      <option value="overwrite">{t("settings.ow_overwrite")}</option>
+                      <option value="rename">{t("settings.ow_rename")}</option>
+                      <option value="error">{t("settings.ow_error")}</option>
+                    </select>
+                    <Button
+                      variant="ghost"
+                      onClick={() => cancel(task.id)}
+                      className="px-2 py-1 text-xs"
+                    >
+                      <Ban size={12} /> {t("common.cancel")}
+                    </Button>
+                  </>
                 )}
                 {(task.status === "done" ||
                   task.status === "error" ||
                   task.status === "cancelled") && (
-                  <button
-                    onClick={() => removeTask(task.id)}
-                    className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                  >
-                    <X size={14} />
-                  </button>
+                  <span className="flex items-center gap-1">
+                    {task.status === "done" && task.dest && (
+                      <button
+                        onClick={() => void revealInDir(task.dest).catch(() => {})}
+                        title={t("common.openDir")}
+                        className="text-zinc-400 hover:text-indigo-500"
+                      >
+                        <FolderOpen size={14} />
+                      </button>
+                    )}
+                    {(task.status === "error" || task.status === "cancelled") && (
+                      <button
+                        onClick={() => retry(task.id)}
+                        title={t("common.retry")}
+                        className="text-zinc-400 hover:text-emerald-500"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => removeTask(task.id)}
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
                 )}
               </span>
             </div>
@@ -81,15 +130,21 @@ export function TaskQueue() {
                       : t("progress.extracting")}
                   </span>
                   <span className="shrink-0">
-                    {task.indeterminate ? t("progress.indeterminate") : percent(task.progress)}
+                    {task.indeterminate
+                      ? t("progress.indeterminate")
+                      : percent(task.progress)}
                   </span>
                 </div>
               </div>
             )}
             {task.status === "done" && task.summary && (
               <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-                {t("progress.done")} · {task.summary.entries_extracted} 项 ·{" "}
-                {formatBytes(task.summary.bytes_written)}
+                {t("progress.done")} · {task.summary.entries_extracted}{" "}
+                {t("preview.items", { count: task.summary.entries_extracted }).replace(
+                  /\d+\s*/,
+                  ""
+                )}{" "}
+                · {formatBytes(task.summary.bytes_written)}
               </div>
             )}
             {task.status === "cancelled" && (
@@ -98,8 +153,17 @@ export function TaskQueue() {
               </div>
             )}
             {task.status === "error" && (
-              <div className="mt-1 truncate text-xs text-red-500">
-                {t("progress.error")}: {task.error}
+              <div
+                className="mt-1 break-words text-xs text-red-500"
+                title={task.error}
+              >
+                {t("progress.error")}:{" "}
+                {task.error_code
+                  ? describeError(
+                      { code: task.error_code, message: task.error ?? "" },
+                      t
+                    )
+                  : task.error}
               </div>
             )}
           </div>

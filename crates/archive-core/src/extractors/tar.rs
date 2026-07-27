@@ -123,6 +123,8 @@ impl ArchiveExtractor for TarExtractor {
             };
             ctx.progress.on_entry_start(index, 0, &metadata);
             summary.entries_total += 1;
+            // 流式格式逐条累计校验条目数，防海量条目耗尽内存。
+            ctx.options.limits.check_entries(summary.entries_total)?;
 
             if entry_type.is_dir() {
                 let relative = sanitize_entry_path(&path, ctx.dest)?;
@@ -160,6 +162,7 @@ impl ArchiveExtractor for TarExtractor {
                 bytes_done,
                 size,
                 0,
+                &ctx.options.limits,
             ) {
                 Ok(bytes) => {
                     output.commit()?;

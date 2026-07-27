@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { Package, ChevronLeft, AlertCircle } from "lucide-react";
 import { Header } from "./components/Header";
@@ -9,6 +10,7 @@ import { PasswordPrompt } from "./components/PasswordPrompt";
 import { TaskQueue } from "./components/TaskQueue";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Button, Badge } from "./components/ui";
+import { ToastContainer } from "./hooks/useToast";
 import { useTheme } from "./hooks/useTheme";
 import { useDragDrop } from "./hooks/useDragDrop";
 import { useExtract } from "./hooks/useExtract";
@@ -22,6 +24,7 @@ export default function App() {
   const { t } = useTranslation();
   const { run } = useExtract();
   const settings = useAppStore((s) => s.settings);
+  const addRecentDir = useAppStore((s) => s.addRecentDir);
 
   const [file, setFile] = useState<string | null>(null);
   const [entries, setEntries] = useState<EntryDto[]>([]);
@@ -74,17 +77,39 @@ export default function App() {
     []
   );
 
-  useDragDrop((paths) => {
-    // 多文件拖入：当前为单归档预览模型，明确提示而非静默丢弃。
-    if (paths.length === 1) {
+  // 批量拖入：首个文件进入预览，其余自动入队解压（复用单文件目标目录推导）。
+  const handleDrop = useCallback(
+    (paths: string[]) => {
+      if (paths.length === 0) return;
+      if (paths.length === 1) {
+        void loadFile(paths[0]);
+        return;
+      }
+      // 多文件：第一个进预览，其余按同名子目录直接入队。
       void loadFile(paths[0]);
-    } else if (paths.length > 1) {
-      setLoadError({
-        code: "io",
-        message: t("drop.oneAtATime"),
-      });
-    }
-  });
+      for (const p of paths.slice(1)) {
+        const dir = p.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
+        const name = basename(p).replace(/\.[^.]+$/, "");
+        void run(p, `${dir}/${name}`, null, settings.overwrite);
+      }
+    },
+    [loadFile, run, settings.overwrite]
+  );
+
+  // 监听文件关联/右键菜单启动事件：后端通过 argv 识别归档路径并 emit "open-file"。
+  // loadFile 用 ref 包裹以保证监听器稳定，避免每次重渲染重建。
+  const loadFileRef = useRef(loadFile);
+  loadFileRef.current = loadFile;
+  useEffect(() => {
+    const unlisten = listen<string>("open-file", (e) => {
+      if (e.payload) void loadFileRef.current(e.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  const { hovering } = useDragDrop(handleDrop);
 
   const handleExtract = () => {
     if (!file || !dest) return;
@@ -92,11 +117,12 @@ export default function App() {
       setAskPassword(true);
       return;
     }
+    addRecentDir(dest);
     void run(file, dest, password, settings.overwrite);
   };
 
   return (
-    <div className="flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <div className="relative flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <Header onOpenSettings={() => setShowSettings(true)} />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
         {file ? (
@@ -126,7 +152,11 @@ export default function App() {
               <label className="text-xs font-medium text-zinc-500">
                 {t("dest.label")}
               </label>
-              <DestinationPicker value={dest} onChange={setDest} />
+              <DestinationPicker
+                value={dest}
+                onChange={setDest}
+                onPickRecent={addRecentDir}
+              />
             </div>
             <div className="flex justify-end">
               <Button onClick={handleExtract} disabled={!dest || loading}>
@@ -135,10 +165,22 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <DropZone onFile={(p) => loadFile(p)} />
+          <DropZone onFile={(p) => loadFile(p)} hovering={hovering} />
         )}
       </main>
       <TaskQueue />
+      {hovering && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-indigo-500/10 backdrop-blur-[1px]">
+          <div className="rounded-2xl border-2 border-dashed border-indigo-400 bg-white/80 px-10 py-8 text-center shadow-lg dark:bg-zinc-900/80">
+            <div className="text-base font-medium text-indigo-600 dark:text-indigo-300">
+              {t("drop.hovering")}
+            </div>
+            <div className="mt-1 text-sm text-zinc-500">
+              {t("drop.hoveringHint")}
+            </div>
+          </div>
+        </div>
+      )}
       <PasswordPrompt
         open={askPassword}
         onClose={() => setAskPassword(false)}
@@ -148,6 +190,7 @@ export default function App() {
         }}
       />
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
+      <ToastContainer />
     </div>
   );
 }

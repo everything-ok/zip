@@ -43,24 +43,75 @@ impl ArchiveExtractor for ZipExtractor {
     }
 
     fn extract(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        self.extract_filtered(ctx, None)
+    }
+
+    fn supports_partial(&self) -> bool {
+        true
+    }
+
+    fn extract_entries(
+        &self,
+        ctx: &ExtractContext,
+        entries: &[String],
+    ) -> anyhow::Result<ExtractSummary> {
+        // 空集合视作解压全部。
+        if entries.is_empty() {
+            return self.extract(ctx);
+        }
+        self.extract_filtered(ctx, Some(entries))
+    }
+}
+
+impl ZipExtractor {
+    /// 解压实现，可选 `filter` 限定只解压匹配的归档内路径。
+    /// `filter=None` 解压全部；匹配时目录前缀也一并解压以保留结构。
+    fn extract_filtered(
+        &self,
+        ctx: &ExtractContext,
+        filter: Option<&[String]>,
+    ) -> anyhow::Result<ExtractSummary> {
         let file = fs::File::open(ctx.source)?;
         let mut zip = ZipArchive::new(file)?;
         let password = ctx.options.password.as_deref();
         let total = zip.len();
 
+        // 规整过滤集合为带尾斜杠感知的匹配：条目路径相等，或为目录前缀。
+        let filter_set: std::collections::HashSet<String> = filter
+            .map(|slice| slice.iter().map(|s| normalize_filter(s)).collect())
+            .unwrap_or_default();
+        let want = |name: &str| -> bool {
+            if filter_set.is_empty() {
+                return true;
+            }
+            let norm = name.replace('\\', "/");
+            if filter_set.contains(&norm) {
+                return true;
+            }
+            // 目录前缀：若过滤项是目录，其下文件也应包含。
+            filter_set.iter().any(|f| {
+                norm.starts_with(f.trim_end_matches('/').to_string().as_str())
+                    && (f.ends_with('/') || norm.as_bytes().get(f.len()) == Some(&b'/'))
+            })
+        };
+
         // ZIP 可随机访问，先计算所有非目录条目的未压缩总大小，用于整体进度。
         let mut total_bytes = 0_u64;
+        let mut matched = 0usize;
         for index in 0..total {
             if let Ok(entry) = zip.by_index_raw(index) {
-                if !entry.is_dir() {
+                if !entry.is_dir() && want(entry.name()) {
                     total_bytes += entry.size();
+                    matched += 1;
                 }
             }
         }
-        ctx.progress.on_start(total, total_bytes);
+        // 条目数上限校验，防海量条目耗尽资源。
+        ctx.options.limits.check_entries(total)?;
+        ctx.progress.on_start(matched, total_bytes);
 
         let mut summary = ExtractSummary {
-            entries_total: total,
+            entries_total: matched,
             ..Default::default()
         };
         let mut bytes_done = 0_u64;
@@ -87,6 +138,9 @@ impl ArchiveExtractor for ZipExtractor {
                 }
             };
             let name = entry.name().to_string();
+            if !want(&name) {
+                continue;
+            }
             let size = entry.size();
             let is_directory = entry.is_dir();
             let metadata = ArchiveEntry {
@@ -97,7 +151,7 @@ impl ArchiveExtractor for ZipExtractor {
                 is_encrypted: entry.encrypted(),
                 modified: None,
             };
-            ctx.progress.on_entry_start(index, total, &metadata);
+            ctx.progress.on_entry_start(index, matched, &metadata);
 
             if is_directory {
                 let relative = sanitize_entry_path(&name, ctx.dest)?;
@@ -122,6 +176,7 @@ impl ArchiveExtractor for ZipExtractor {
                 bytes_done,
                 size,
                 total_bytes,
+                &ctx.options.limits,
             ) {
                 Ok(bytes) => {
                     output.commit()?;
@@ -131,7 +186,6 @@ impl ArchiveExtractor for ZipExtractor {
                     bytes_done += bytes;
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {
-                    // Drop 清理临时文件；既有目标文件没有被打开或截断。
                     summary.cancelled = true;
                     return Ok(summary);
                 }
@@ -145,4 +199,13 @@ impl ArchiveExtractor for ZipExtractor {
         }
         Ok(summary)
     }
+}
+
+/// 规整过滤路径：统一正斜杠，去前导斜杠，目录补尾斜杠。
+fn normalize_filter(s: &str) -> String {
+    let mut norm = s.replace('\\', "/");
+    while norm.starts_with('/') {
+        norm.remove(0);
+    }
+    norm
 }

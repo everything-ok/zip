@@ -145,12 +145,16 @@ impl RarExtractor {
             let name = header.filename.to_string_lossy().to_string();
             // 校验路径；非法路径直接拒绝整个归档，避免 unrar 写入逃逸文件。
             sanitize_entry_path(&name, ctx.dest)?;
+            // 单文件大小上限校验，防解压炸弹。
+            ctx.options.limits.check_file_size(header.unpacked_size)?;
             entries.push(PreflightEntry {
                 name,
                 is_directory: header.is_directory(),
                 unpacked_size: header.unpacked_size,
             });
         }
+        // 条目数上限校验，防海量条目耗尽资源。
+        ctx.options.limits.check_entries(entries.len())?;
         Ok(Preflight {
             count: entries.len(),
             entries,
@@ -254,6 +258,17 @@ fn commit_isolation(
         };
         ctx.progress
             .on_entry_start(index, preflight.count, &metadata);
+
+        // 单文件大小上限校验，防解压炸弹。
+        ctx.options.limits.check_file_size(entry.unpacked_size)?;
+        // 累计总字节上限校验。
+        if bytes_done + entry.unpacked_size > ctx.options.limits.max_total_bytes {
+            return Err(crate::error::ArchiveError::BombDetected {
+                current: bytes_done + entry.unpacked_size,
+                max: ctx.options.limits.max_total_bytes,
+            }
+            .into());
+        }
 
         let source_in_isolation = isolation.join(&relative);
 

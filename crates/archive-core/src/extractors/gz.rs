@@ -85,6 +85,7 @@ impl ArchiveExtractor for GzExtractor {
             0,
             0,
             0,
+            &ctx.options.limits,
         ) {
             Ok(bytes) => {
                 output.commit()?;

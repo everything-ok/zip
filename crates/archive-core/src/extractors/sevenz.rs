@@ -49,6 +49,33 @@ impl ArchiveExtractor for SevenZExtractor {
     }
 
     fn extract(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        self.extract_filtered(ctx, &std::collections::HashSet::new())
+    }
+
+    fn supports_partial(&self) -> bool {
+        true
+    }
+
+    fn extract_entries(
+        &self,
+        ctx: &ExtractContext,
+        entries: &[String],
+    ) -> anyhow::Result<ExtractSummary> {
+        if entries.is_empty() {
+            return self.extract(ctx);
+        }
+        let filter: std::collections::HashSet<String> =
+            entries.iter().map(|s| s.replace('\\', "/")).collect();
+        self.extract_filtered(ctx, &filter)
+    }
+}
+
+impl SevenZExtractor {
+    fn extract_filtered(
+        &self,
+        ctx: &ExtractContext,
+        filter: &std::collections::HashSet<String>,
+    ) -> anyhow::Result<ExtractSummary> {
         std::fs::create_dir_all(ctx.dest)?;
 
         // 7z 头部含每个条目的未压缩大小，先读取计算任务总量，用于整体进度。
@@ -63,6 +90,7 @@ impl ArchiveExtractor for SevenZExtractor {
                     .files
                     .iter()
                     .filter(|f| !f.is_directory())
+                    .filter(|f| filter.is_empty() || wants(filter, f.name()))
                     .map(|f| f.size)
                     .sum(),
                 Err(_) => 0,
@@ -81,6 +109,8 @@ impl ArchiveExtractor for SevenZExtractor {
             abort: None,
             bytes_done: 0,
             total_bytes,
+            limits: &ctx.options.limits,
+            filter,
         };
         let file = std::fs::File::open(ctx.source)?;
         let encrypted = ctx.options.password.is_some();
@@ -129,6 +159,9 @@ struct SzState<'a> {
     abort: Option<anyhow::Error>,
     bytes_done: u64,
     total_bytes: u64,
+    limits: &'a crate::types::ExtractLimits,
+    /// 部分解压过滤集合（空表示全部）。
+    filter: &'a std::collections::HashSet<String>,
 }
 
 /// 单条目回调：净化路径、应用覆盖策略、回报进度、检查取消。
@@ -146,8 +179,19 @@ fn sz_callback(
     state.summary.entries_total += 1;
 
     let name = entry.name().to_string();
+    // 部分解压：非目标条目（含目录前缀）直接消费跳过，不写入目标。
+    if !state.filter.is_empty() && !wants(state.filter, &name) {
+        let _ = std::io::copy(reader, &mut std::io::sink());
+        state.idx += 1;
+        return Ok(true);
+    }
     let is_directory = entry.is_directory();
     let size = entry.size;
+    // 条目数上限校验，防海量条目耗尽资源。
+    if let Err(error) = state.limits.check_entries(state.summary.entries_total) {
+        state.abort = Some(error.into());
+        return Ok(false);
+    }
     let metadata = ArchiveEntry {
         path: name.clone(),
         size,
@@ -187,6 +231,7 @@ fn sz_callback(
                 state.bytes_done,
                 size,
                 state.total_bytes,
+                state.limits,
             ) {
                 Ok(bytes) => {
                     if let Err(error) = output.commit() {
@@ -238,4 +283,20 @@ fn drain_reader(reader: &mut dyn std::io::Read, state: &mut SzState, size: u64) 
 fn looks_like_password_error(message: &str) -> bool {
     let lower = message.to_ascii_lowercase();
     lower.contains("password") || lower.contains("encrypt")
+}
+
+/// 判断归档内路径是否在部分解压的目标集合中。
+/// 支持目录前缀：过滤项 `dir/` 时，其下文件 `dir/a.txt` 也匹配。
+fn wants(filter: &std::collections::HashSet<String>, name: &str) -> bool {
+    if filter.is_empty() {
+        return true;
+    }
+    let norm = name.replace('\\', "/");
+    if filter.contains(&norm) {
+        return true;
+    }
+    filter.iter().any(|f| {
+        let base = f.trim_end_matches('/');
+        norm.starts_with(base) && norm.as_bytes().get(base.len()) == Some(&b'/')
+    })
 }

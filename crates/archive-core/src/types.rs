@@ -88,6 +88,9 @@ pub struct ExtractOptions {
     pub keep_dir_mtime: bool,
     /// 是否跳过符号链接（默认 true，防逃逸）。
     pub skip_symlinks: bool,
+    /// 解压资源上限（防解压炸弹与资源耗尽）。None 表示用默认值。
+    #[serde(default)]
+    pub limits: ExtractLimits,
 }
 
 impl Default for ExtractOptions {
@@ -97,6 +100,60 @@ impl Default for ExtractOptions {
             overwrite: OverwritePolicy::default(),
             keep_dir_mtime: true,
             skip_symlinks: true,
+            limits: ExtractLimits::default(),
+        }
+    }
+}
+
+/// 解压安全上限。默认值保守：足以覆盖正常大归档，同时拦截恶意炸弹。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractLimits {
+    /// 解压后总字节上限（默认 4 GiB）。
+    pub max_total_bytes: u64,
+    /// 单个文件未压缩字节上限（默认 1 GiB）。
+    pub max_file_bytes: u64,
+    /// 压缩比上限（未压缩 / 压缩，默认 200），用于流式格式无法预知总量时。
+    pub max_ratio: u64,
+    /// 归档条目数上限（默认 100000）。
+    pub max_entries: usize,
+    /// 单条目路径总长度上限（默认 4096，兼容长路径但防滥用）。
+    pub max_path_len: usize,
+}
+
+impl Default for ExtractLimits {
+    fn default() -> Self {
+        Self {
+            max_total_bytes: 4 * 1024 * 1024 * 1024,
+            max_file_bytes: 1024 * 1024 * 1024,
+            max_ratio: 200,
+            max_entries: 100_000,
+            max_path_len: 4096,
+        }
+    }
+}
+
+impl ExtractLimits {
+    /// 校验条目数是否超限。
+    pub fn check_entries(&self, count: usize) -> Result<(), crate::error::ArchiveError> {
+        if count > self.max_entries {
+            Err(crate::error::ArchiveError::TooManyEntries {
+                actual: count,
+                max: self.max_entries,
+            })
+        } else {
+            Ok(())
+        }
+    }
+
+    /// 校验单文件大小是否超限。
+    pub fn check_file_size(&self, size: u64) -> Result<(), crate::error::ArchiveError> {
+        if size > self.max_file_bytes {
+            Err(crate::error::ArchiveError::FileTooLarge {
+                actual: size,
+                max: self.max_file_bytes,
+            })
+        } else {
+            Ok(())
         }
     }
 }

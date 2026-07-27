@@ -12,8 +12,10 @@ pub struct ListRequest {
 pub struct EntryDto {
     pub path: String,
     pub size: u64,
+    pub compressed_size: u64,
     pub is_dir: bool,
     pub is_encrypted: bool,
+    pub modified: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -24,6 +26,9 @@ pub struct ExtractRequest {
     pub password: Option<String>,
     /// "skip" | "overwrite" | "rename" | "error"
     pub overwrite: String,
+    /// 部分解压：只解压这些归档内路径。空或 None 表示解压全部。
+    #[serde(default)]
+    pub entries: Option<Vec<String>>,
 }
 
 /// 流式进度事件（走 `Channel<T>`）。
@@ -86,6 +91,10 @@ impl ArchiveErrorDto {
                 archive_core::ArchiveError::Unsupported(_) => "unsupported",
                 archive_core::ArchiveError::UnknownFormat(_) => "unsupported",
                 archive_core::ArchiveError::PathTraversal(_) => "path_traversal",
+                archive_core::ArchiveError::PathTooLong { .. } => "path_too_long",
+                archive_core::ArchiveError::BombDetected { .. } => "bomb_detected",
+                archive_core::ArchiveError::FileTooLarge { .. } => "file_too_large",
+                archive_core::ArchiveError::TooManyEntries { .. } => "too_many_entries",
                 archive_core::ArchiveError::Cancelled => "cancelled",
                 archive_core::ArchiveError::Io(_) => "io",
             };

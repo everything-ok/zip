@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Extractr 默认窗口权限","local":true,"windows":["main"],"permissions":["core:default","dialog:allow-open","dialog:allow-save"]}}
+{"default":{"identifier":"default","description":"Extractr 默认窗口权限","local":true,"windows":["main"],"permissions":["core:default","core:event:default","dialog:allow-open","dialog:allow-save","opener:default","opener:allow-open-path","opener:allow-reveal-item-in-dir"]}}

@@ -6,6 +6,7 @@
 //!   让上层（Tauri、未来鸿蒙 NAPI 等）以同步阻塞方式调用并桥接进度/取消；
 //! - 安全：统一 `safety::sanitize_entry_path` 防 Zip Slip，流式 256KB 缓冲防 OOM。
 
+pub mod creators;
 pub mod detect;
 pub mod dispatcher;
 pub mod error;
@@ -27,5 +28,10 @@ unsafe extern "system" {}
 unsafe extern "system" {}
 
 pub use error::ArchiveError;
-pub use traits::{ArchiveExtractor, CancelToken, ExtractContext, ProgressSink};
-pub use types::{ArchiveEntry, ArchiveFormat, ExtractOptions, ExtractSummary, OverwritePolicy};
+pub use traits::{
+    ArchiveCreator, ArchiveExtractor, CancelToken, CreateContext, CreateOptions, CreateSource,
+    ExtractContext, ProgressSink,
+};
+pub use types::{
+    ArchiveEntry, ArchiveFormat, ExtractLimits, ExtractOptions, ExtractSummary, OverwritePolicy,
+};

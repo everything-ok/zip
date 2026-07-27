@@ -3,8 +3,10 @@
 export interface EntryDto {
   path: string;
   size: number;
+  compressed_size: number;
   is_dir: boolean;
   is_encrypted: boolean;
+  modified: number | null;
 }
 
 export interface SummaryDto {
@@ -23,6 +25,11 @@ export interface ArchiveErrorDto {
     | "corrupt"
     | "unsupported"
     | "path_traversal"
+    | "path_too_long"
+    | "bomb_detected"
+    | "file_too_large"
+    | "too_many_entries"
+    | "too_many_tasks"
     | "conflict"
     | "cancelled"
     | "io"
@@ -36,6 +43,7 @@ export interface ExtractRequest {
   dest: string;
   password: string | null;
   overwrite: OverwritePolicy;
+  entries?: string[] | null;
 }
 
 export interface ListRequest {

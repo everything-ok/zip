@@ -1,4 +1,5 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
+import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
 import type {
   ArchiveErrorDto,
   EntryDto,
@@ -27,6 +28,16 @@ export async function extractArchive(
 
 export async function cancelExtraction(taskId: string): Promise<void> {
   return invoke("cancel_extraction", { taskId });
+}
+
+/** 在文件管理器中显示指定路径（所在目录并选中）。 */
+export async function revealInDir(path: string): Promise<void> {
+  return revealItemInDir(path);
+}
+
+/** 用系统默认方式打开路径（目录或文件）。 */
+export async function openPathNative(path: string): Promise<void> {
+  return openPath(path);
 }
 
 /**

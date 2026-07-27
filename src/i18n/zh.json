@@ -3,10 +3,20 @@
     "title": "Extractr",
     "subtitle": "轻量解压工具"
   },
+  "about": {
+    "title": "关于",
+    "desc": "Extractr 是一款轻量、安全、跨平台的解压工具，支持 ZIP、RAR、7z、TAR 等主流格式。",
+    "featureSafe": "安全防护：原子输出、Zip Slip 拦截、解压炸弹防护",
+    "featureFormats": "全格式：ZIP / RAR / 7z / TAR / GZIP / BZIP2 / XZ / Zstd",
+    "featureLight": "低占用：基于系统 WebView2，安装包仅数 MB",
+    "featureCross": "跨平台：核心为纯 Rust，为 macOS / 鸿蒙预留复用"
+  },
   "drop": {
     "hint": "拖拽压缩文件到此处",
     "click": "或 点击选择文件",
-    "oneAtATime": "一次只能处理一个压缩包，请单独选择或拖入"
+    "oneAtATime": "一次只能处理一个压缩包，请单独选择或拖入",
+    "hovering": "松开以解压",
+    "hoveringHint": "支持同时拖入多个文件"
   },
   "common": {
     "extract": "解压",
@@ -15,24 +25,43 @@
     "close": "关闭",
     "confirm": "确定",
     "remove": "移除",
-    "clear": "清空已完成"
+    "clear": "清空已完成",
+    "clearRecent": "清空最近目录",
+    "openDir": "打开所在目录",
+    "retry": "重试",
+    "on": "开",
+    "off": "关"
   },
   "preview": {
     "title": "文件列表",
     "items": "{{count}} 项",
     "total": "总大小",
+    "compressed": "压缩后",
     "encrypted": "已加密",
-    "empty": "选择或拖入压缩文件后查看内容"
+    "empty": "选择或拖入压缩文件后查看内容",
+    "search": "搜索文件名…",
+    "noMatch": "没有匹配的文件",
+    "showAll": "显示全部 {{count}} 项",
+    "colName": "名称",
+    "colSize": "大小",
+    "colRatio": "压缩率",
+    "colModified": "修改时间"
   },
   "dest": {
     "label": "解压到",
     "placeholder": "选择目标目录",
-    "sameDir": "解压到当前目录"
+    "sameDir": "解压到当前目录",
+    "toCurrent": "解压到当前目录",
+    "toSubdir": "解压到同名子目录",
+    "recent": "最近目录"
   },
   "password": {
     "title": "输入密码",
     "placeholder": "该压缩包已加密，请输入密码",
-    "wrong": "密码可能错误，请重试"
+    "wrong": "密码可能错误，请重试",
+    "show": "显示密码",
+    "hide": "隐藏密码",
+    "remember": "记住密码"
   },
   "progress": {
     "extracting": "正在解压",
@@ -46,16 +75,34 @@
     "title": "任务",
     "empty": "暂无任务"
   },
+  "err": {
+    "passwordRequired": "该压缩包已加密，需要密码",
+    "wrongPassword": "密码错误，请重试",
+    "corrupt": "压缩包已损坏或不完整",
+    "unsupported": "不支持的格式或特性",
+    "pathTraversal": "检测到路径逃逸，已拒绝解压",
+    "pathTooLong": "归档内路径过长，已拒绝",
+    "bombDetected": "检测到解压炸弹，已拒绝（输出超过上限）",
+    "fileTooLarge": "单个文件超过大小上限",
+    "tooManyEntries": "归档条目数超过上限",
+    "tooManyTasks": "并发任务过多，请等待已有任务完成",
+    "duplicateTask": "任务 ID 已存在",
+    "conflict": "目标文件已存在",
+    "cancelled": "操作已取消",
+    "io": "读写错误"
+  },
   "settings": {
     "title": "设置",
     "theme": "主题",
     "light": "浅色",
     "dark": "深色",
+    "system": "跟随系统",
     "language": "语言",
     "overwrite": "覆盖策略",
     "ow_skip": "跳过已存在",
     "ow_overwrite": "覆盖",
     "ow_rename": "重命名",
-    "ow_error": "报错"
+    "ow_error": "报错",
+    "autoOpen": "解压后自动打开目录"
   }
 }
