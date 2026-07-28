@@ -36,3 +36,11 @@ export function formatTime(unixSeconds: number | null): string {
   )}:${pad(date.getMinutes())}`;
 }
 
+/** 秒数转人类可读的剩余时间（如 "1m 20s" / "3s"）。 */
+export function formatEta(seconds: number): string {
+  if (seconds <= 0) return "-";
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+

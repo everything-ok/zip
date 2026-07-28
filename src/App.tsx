@@ -17,7 +17,7 @@ import { useExtract } from "./hooks/useExtract";
 import { useAppStore } from "./store/useAppStore";
 import { listArchive, detectFormat, toArchiveError } from "./lib/ipc";
 import { basename } from "./lib/format";
-import type { ArchiveErrorDto, EntryDto } from "./lib/types";
+import type { ArchiveErrorDto, EntryDto, OpenArchiveAction } from "./lib/types";
 
 export default function App() {
   useTheme();
@@ -96,18 +96,33 @@ export default function App() {
     [loadFile, run, settings.overwrite]
   );
 
-  // 监听文件关联/右键菜单启动事件：后端通过 argv 识别归档路径并 emit "open-file"。
+  // 监听文件关联/右键菜单启动事件：后端解析 argv 动作并 emit "open-archive"。
   // loadFile 用 ref 包裹以保证监听器稳定，避免每次重渲染重建。
   const loadFileRef = useRef(loadFile);
+  const runRef = useRef(run);
   loadFileRef.current = loadFile;
+  runRef.current = run;
   useEffect(() => {
-    const unlisten = listen<string>("open-file", (e) => {
-      if (e.payload) void loadFileRef.current(e.payload);
+    const unlisten = listen<OpenArchiveAction>("open-archive", (e) => {
+      const { action, path } = e.payload;
+      if (!path) return;
+      if (action === "open") {
+        void loadFileRef.current(path);
+      } else if (action === "extractHere") {
+        // 解压到归档所在目录。
+        const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
+        void runRef.current(path, dir || ".", null, settings.overwrite);
+      } else if (action === "extractToSubdir") {
+        // 解压到同名子目录。
+        const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
+        const name = basename(path).replace(/\.[^.]+$/, "");
+        void runRef.current(path, `${dir}/${name}`, null, settings.overwrite);
+      }
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [settings.overwrite]);
 
   const { hovering } = useDragDrop(handleDrop);
 

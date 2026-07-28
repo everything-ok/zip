@@ -52,6 +52,8 @@ pub enum ProgressEvent {
         processed: u64,
         total: u64,
         indeterminate: bool,
+        speed: u64,
+        eta_secs: Option<u64>,
     },
     Finished {
         summary: SummaryDto,

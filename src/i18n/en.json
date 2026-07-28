@@ -11,6 +11,9 @@
     "featureLight": "Lightweight: system WebView2, installer only a few MB",
     "featureCross": "Cross-platform: pure-Rust core, reusable for macOS / HarmonyOS"
   },
+  "update": {
+    "available": "New version v{{version}} available, click to download"
+  },
   "drop": {
     "hint": "Drag archive files here",
     "click": "or click to choose",

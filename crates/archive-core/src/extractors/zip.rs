@@ -30,8 +30,9 @@ impl ArchiveExtractor for ZipExtractor {
         let mut entries = Vec::with_capacity(zip.len());
         for index in 0..zip.len() {
             let entry = zip.by_index_raw(index)?;
+            // ZIP 文件名可能非 UTF-8（GBK 中文 ZIP），用 name_raw 探测后回退 GBK。
             entries.push(ArchiveEntry {
-                path: entry.name().to_string(),
+                path: decode_zip_name(entry.name_raw()),
                 size: entry.size(),
                 compressed_size: entry.compressed_size(),
                 is_dir: entry.is_dir(),
@@ -40,6 +41,53 @@ impl ArchiveExtractor for ZipExtractor {
             });
         }
         Ok(entries)
+    }
+
+    fn supports_test(&self) -> bool {
+        true
+    }
+
+    fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        // ZIP 测试：遍历读取每个条目到 sink，CRC 不匹配会返回 InvalidCrc。
+        let file = fs::File::open(ctx.source)?;
+        let mut zip = ZipArchive::new(file)?;
+        let password = ctx.options.password.as_deref();
+        let total = zip.len();
+        ctx.options.limits.check_entries(total)?;
+        ctx.progress.on_start(total, 0);
+        let mut summary = ExtractSummary {
+            entries_total: total,
+            ..Default::default()
+        };
+        for index in 0..total {
+            if ctx.cancel.is_cancelled() {
+                summary.cancelled = true;
+                return Ok(summary);
+            }
+            let entry_result = match password {
+                Some(p) => zip.by_index_decrypt(index, p.as_bytes()),
+                None => zip.by_index(index),
+            };
+            let mut entry = match entry_result {
+                Ok(e) => e,
+                Err(zip::result::ZipError::InvalidPassword) => {
+                    anyhow::bail!(ArchiveError::PasswordRequired);
+                }
+                Err(e) => return Err(e.into()),
+            };
+            // 读入 sink 触发 CRC 校验。
+            let name = decode_zip_name(entry.name_raw());
+            ctx.progress.on_entry_start(index, total, &ArchiveEntry {
+                path: name,
+                size: entry.size(),
+                ..Default::default()
+            });
+            let copied = std::io::copy(&mut entry, &mut std::io::sink())?;
+            summary.entries_extracted += 1;
+            summary.bytes_written += copied;
+            ctx.progress.on_entry_done(index, copied);
+        }
+        Ok(summary)
     }
 
     fn extract(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
@@ -100,7 +148,7 @@ impl ZipExtractor {
         let mut matched = 0usize;
         for index in 0..total {
             if let Ok(entry) = zip.by_index_raw(index) {
-                if !entry.is_dir() && want(entry.name()) {
+                if !entry.is_dir() && want(&decode_zip_name(entry.name_raw())) {
                     total_bytes += entry.size();
                     matched += 1;
                 }
@@ -137,7 +185,7 @@ impl ZipExtractor {
                     return Err(error.into());
                 }
             };
-            let name = entry.name().to_string();
+            let name = decode_zip_name(entry.name_raw());
             if !want(&name) {
                 continue;
             }
@@ -208,4 +256,16 @@ fn normalize_filter(s: &str) -> String {
         norm.remove(0);
     }
     norm
+}
+
+/// 解码 ZIP 条目名：优先 UTF-8，失败回退 GBK（中文 ZIP 常见编码）。
+/// zip crate 默认按 cp437 解码非 UTF-8 名，导致中文乱码。
+fn decode_zip_name(raw: &[u8]) -> String {
+    // 若字节是合法 UTF-8，直接用。
+    if let Ok(s) = std::str::from_utf8(raw) {
+        return s.to_string();
+    }
+    // 否则按 GBK 解码（encoding_rs 无 BOM 检测，直接 GBK）。
+    let (cow, _, _) = encoding_rs::GBK.decode(raw);
+    cow.into_owned()
 }

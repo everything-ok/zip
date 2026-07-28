@@ -68,6 +68,110 @@ impl ArchiveExtractor for SevenZExtractor {
             entries.iter().map(|s| s.replace('\\', "/")).collect();
         self.extract_filtered(ctx, &filter)
     }
+
+    fn supports_test(&self) -> bool {
+        true
+    }
+
+    fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        // 7z 测试：用 decompress 回调把每个条目 reader 读入 sink，触发内部 CRC 校验，不写盘。
+        ctx.progress.on_start(0, 0);
+        let mut state = SzState {
+            progress: ctx.progress,
+            cancel: ctx.cancel,
+            dest: ctx.dest,
+            overwrite: crate::types::OverwritePolicy::Skip,
+            idx: 0,
+            summary: ExtractSummary::default(),
+            cancelled: false,
+            abort: None,
+            bytes_done: 0,
+            total_bytes: 0,
+            limits: &ctx.options.limits,
+            filter: &std::collections::HashSet::new(),
+        };
+        let file = std::fs::File::open(ctx.source)?;
+        let encrypted = ctx.options.password.is_some();
+        let result = match ctx.options.password.as_deref() {
+            Some(password) => {
+                let sevenz_password = sevenz_rust2::Password::from(password);
+                sevenz_rust2::decompress_with_extract_fn_and_password(
+                    file,
+                    std::path::Path::new(""),
+                    sevenz_password,
+                    |entry, reader, _path| sz_test_callback(entry, reader, &mut state, encrypted),
+                )
+            }
+            None => sevenz_rust2::decompress_with_extract_fn(file, std::path::Path::new(""), |entry, reader, _path| {
+                sz_test_callback(entry, reader, &mut state, encrypted)
+            }),
+        };
+        if let Some(abort) = state.abort.take() {
+            return Err(abort);
+        }
+        if state.cancelled {
+            state.summary.cancelled = true;
+            return Ok(state.summary);
+        }
+        if let Err(error) = result {
+            if looks_like_password_error(&error.to_string()) {
+                anyhow::bail!(crate::error::ArchiveError::WrongPassword);
+            }
+            return Err(error.into());
+        }
+        Ok(state.summary)
+    }
+}
+
+/// 测试模式回调：读入 sink 触发 CRC 校验，不写盘。
+fn sz_test_callback(
+    entry: &sevenz_rust2::ArchiveEntry,
+    reader: &mut dyn std::io::Read,
+    state: &mut SzState,
+    encrypted: bool,
+) -> Result<bool, sevenz_rust2::Error> {
+    if state.cancel.is_cancelled() {
+        state.cancelled = true;
+        return Ok(false);
+    }
+    state.summary.entries_total += 1;
+    if let Err(error) = state.limits.check_entries(state.summary.entries_total) {
+        state.abort = Some(error.into());
+        return Ok(false);
+    }
+    let name = entry.name().to_string();
+    let is_directory = entry.is_directory();
+    let size = entry.size;
+    state.progress.on_entry_start(
+        state.idx,
+        0,
+        &crate::types::ArchiveEntry {
+            path: name,
+            size,
+            compressed_size: entry.compressed_size,
+            is_dir: is_directory,
+            is_encrypted: encrypted,
+            modified: None,
+        },
+    );
+    if !is_directory {
+        match std::io::copy(reader, &mut std::io::sink()) {
+            Ok(bytes) => {
+                state.summary.bytes_written += bytes;
+                state.summary.entries_extracted += 1;
+                state.progress.on_entry_done(state.idx, bytes);
+            }
+            Err(error) => {
+                state.abort = Some(error.into());
+                return Ok(false);
+            }
+        }
+    } else {
+        state.summary.entries_extracted += 1;
+        state.progress.on_entry_done(state.idx, 0);
+    }
+    state.idx += 1;
+    Ok(true)
 }
 
 impl SevenZExtractor {

@@ -7,6 +7,48 @@ pub mod state;
 
 use tauri::{Emitter, Manager};
 
+/// 从 argv 解析右键菜单动作与归档路径。
+/// 支持 `--extract-here <path>` / `--extract-to-subdir <path>` / 裸路径（打开预览）。
+fn parse_open_action(args: &[String]) -> Option<OpenAction> {
+    let mut iter = args.iter().skip(1);
+    let archive_exts = [
+        ".zip", ".7z", ".rar", ".tar", ".gz", ".gzip", ".bz2", ".xz", ".zst", ".zstd", ".tgz",
+        ".tbz2", "tbz", ".txz", ".tzst", ".tzs",
+    ];
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--extract-here" => {
+                if let Some(path) = iter.next() {
+                    return Some(OpenAction::ExtractHere { path: path.clone() });
+                }
+            }
+            "--extract-to-subdir" => {
+                if let Some(path) = iter.next() {
+                    return Some(OpenAction::ExtractToSubdir { path: path.clone() });
+                }
+            }
+            _ => {
+                // 裸路径：归档文件则打开预览。
+                let lower = arg.to_ascii_lowercase();
+                if archive_exts.iter().any(|ext| lower.ends_with(ext))
+                    && std::path::Path::new(arg).is_file()
+                {
+                    return Some(OpenAction::Open { path: arg.clone() });
+                }
+            }
+        }
+    }
+    None
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase", tag = "action")]
+enum OpenAction {
+    Open { path: String },
+    ExtractHere { path: String },
+    ExtractToSubdir { path: String },
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
@@ -19,37 +61,23 @@ pub fn run() {
             commands::extract_archive,
             commands::cancel_extraction,
             commands::create_archive,
+            commands::convert_archive,
+            commands::test_archive,
+            commands::check_update,
         ]);
 
-    // 处理文件关联/右键菜单启动参数：当通过"用 Extractr 打开"或双击归档启动时，
-    // argv 中带文件路径，前端可通过 open-file 事件接收并自动预览。
+    // 处理文件关联/右键菜单启动参数，解析动作并 emit open-archive 事件。
     builder = builder.setup(|app| {
-        // 1. 启动时的命令行参数（Windows 双击关联文件会传入路径）。
         let args: Vec<String> = std::env::args().collect();
-        let candidates: Vec<String> = args
-            .into_iter()
-            .skip(1)
-            .filter(|a| {
-                let lower = a.to_ascii_lowercase();
-                let is_archive_ext = [
-                    ".zip", ".7z", ".rar", ".tar", ".gz", ".gzip", ".bz2", ".xz", ".zst",
-                    ".zstd", ".tgz", ".tbz2", "tbz", ".txz", ".tzst", ".tzs",
-                ]
-                .iter()
-                .any(|ext| lower.ends_with(ext));
-                is_archive_ext && std::path::Path::new(a).is_file()
-            })
-            .collect();
-        if !candidates.is_empty() {
+        if let Some(action) = parse_open_action(&args) {
             let window = app.get_webview_window("main");
             if let Some(window) = window {
-                let _ = window.emit("open-file", candidates[0].clone());
+                let _ = window.emit("open-archive", action);
             }
         }
         Ok(())
     });
 
-    // 2. 运行中再次通过文件关联打开（单实例已在后续扩展），监听 deep-link/file。
     builder = builder.on_window_event(|_window, _event| {});
 
     builder

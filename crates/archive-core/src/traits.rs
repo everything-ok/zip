@@ -21,6 +21,9 @@ pub trait ProgressSink: Send + Sync {
     fn on_entry_start(&self, _index: usize, _total: usize, _entry: &ArchiveEntry) {}
     fn on_entry_done(&self, _index: usize, _bytes_written: u64) {}
     fn on_message(&self, _msg: &str) {}
+
+    /// 速度与 ETA 回调（字节/秒、剩余秒）。由上层适配层计算；核心可忽略。
+    fn on_speed(&self, _bytes_per_sec: u64, _eta_secs: Option<u64>) {}
 }
 
 /// 取消令牌接口。
@@ -64,6 +67,34 @@ pub trait ArchiveExtractor: Send + Sync {
 
     /// 是否支持部分解压（随机访问）。
     fn supports_partial(&self) -> bool {
+        false
+    }
+
+    /// 测试归档完整性（CRC 校验，不写盘）。默认实现走解压到系统临时目录。
+    /// 支持的格式覆盖写此方法以避免写盘开销。
+    fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        // 用进程 id + 计数器构造唯一临时目录，避免并发冲突。
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+        let tmp = std::env::temp_dir().join(format!("extractr-test-{}-{}", std::process::id(), seq));
+        std::fs::create_dir_all(&tmp)?;
+        let mut opts = ctx.options.clone();
+        opts.overwrite = crate::types::OverwritePolicy::Overwrite;
+        let test_ctx = ExtractContext {
+            source: ctx.source,
+            dest: &tmp,
+            options: &opts,
+            progress: ctx.progress,
+            cancel: ctx.cancel,
+        };
+        let summary = self.extract(&test_ctx);
+        let _ = std::fs::remove_dir_all(&tmp);
+        summary
+    }
+
+    /// 是否支持原生测试（无需写盘的 CRC 校验）。
+    fn supports_test(&self) -> bool {
         false
     }
 }

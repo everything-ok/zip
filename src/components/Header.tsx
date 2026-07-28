@@ -1,13 +1,26 @@
-import { useState } from "react";
-import { Archive, Settings as SettingsIcon, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Archive, Settings as SettingsIcon, Info, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal } from "./ui";
+import { openPathNative, checkUpdate, type UpdateInfo } from "../lib/ipc";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.2.0";
 
 export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+
+  // 启动后异步检查更新（失败静默，不打扰用户）。
+  useEffect(() => {
+    let active = true;
+    checkUpdate().then((info) => {
+      if (active && info) setUpdate(info);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <>
@@ -24,6 +37,15 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {update && (
+            <button
+              onClick={() => void openPathNative(update.url).catch(() => {})}
+              title={t("update.available", { version: update.version })}
+              className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300"
+            >
+              <Download size={12} /> v{update.version}
+            </button>
+          )}
           <Button
             variant="ghost"
             onClick={() => setAboutOpen(true)}

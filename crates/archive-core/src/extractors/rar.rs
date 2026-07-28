@@ -51,6 +51,58 @@ impl ArchiveExtractor for RarExtractor {
         Ok(entries)
     }
 
+    fn supports_test(&self) -> bool {
+        true
+    }
+
+    fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
+        // RAR 测试：用 unrar 的 test 模式，CRC 校验不写盘。
+        let archive = match &ctx.options.password {
+            Some(value) => unrar::Archive::with_password(ctx.source, value),
+            None => unrar::Archive::new(ctx.source),
+        };
+        // 预扫描条目数用于进度与上限校验。
+        let count = self.preflight(ctx)?.count;
+        ctx.progress.on_start(count, 0);
+        let mut summary = ExtractSummary {
+            entries_total: count,
+            ..Default::default()
+        };
+        let mut open = archive.open_for_processing()?;
+        let mut idx = 0usize;
+        while let Some(file) = open.read_header()? {
+            if ctx.cancel.is_cancelled() {
+                summary.cancelled = true;
+                break;
+            }
+            let header = file.entry();
+            let name = header.filename.to_string_lossy().to_string();
+            let size = header.unpacked_size;
+            let is_dir = header.is_directory();
+            ctx.progress.on_entry_start(
+                idx,
+                count,
+                &ArchiveEntry {
+                    path: name,
+                    size,
+                    compressed_size: 0,
+                    is_dir,
+                    is_encrypted: header.is_encrypted(),
+                    modified: None,
+                },
+            );
+            // test() 校验 CRC 不写盘。
+            open = file.test()?;
+            summary.entries_extracted += 1;
+            if !is_dir {
+                summary.bytes_written += size;
+            }
+            ctx.progress.on_entry_done(idx, size);
+            idx += 1;
+        }
+        Ok(summary)
+    }
+
     fn extract(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
         fs::create_dir_all(ctx.dest)?;
 

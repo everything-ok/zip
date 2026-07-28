@@ -12,7 +12,7 @@ import { useAppStore } from "../store/useAppStore";
 import { useExtract } from "../hooks/useExtract";
 import { revealInDir } from "../lib/ipc";
 import { describeError } from "../lib/errorMap";
-import { basename, formatBytes, percent } from "../lib/format";
+import { basename, formatBytes, percent, formatEta } from "../lib/format";
 import { Button } from "./ui";
 import type { OverwritePolicy } from "../lib/types";
 
@@ -133,6 +133,12 @@ export function TaskQueue() {
                     {task.indeterminate
                       ? t("progress.indeterminate")
                       : percent(task.progress)}
+                    {task.speed && task.speed > 0 && (
+                      <span className="ml-2 text-zinc-400">
+                        {formatBytes(task.speed)}/s
+                        {task.eta_secs ? ` · ${formatEta(task.eta_secs)}` : ""}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>

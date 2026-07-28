@@ -11,6 +11,9 @@
     "featureLight": "低占用：基于系统 WebView2，安装包仅数 MB",
     "featureCross": "跨平台：核心为纯 Rust，为 macOS / 鸿蒙预留复用"
   },
+  "update": {
+    "available": "发现新版本 v{{version}}，点击前往下载"
+  },
   "drop": {
     "hint": "拖拽压缩文件到此处",
     "click": "或 点击选择文件",

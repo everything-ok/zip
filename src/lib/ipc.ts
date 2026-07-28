@@ -40,6 +40,21 @@ export async function openPathNative(path: string): Promise<void> {
   return openPath(path);
 }
 
+/// 更新检查信息。
+export interface UpdateInfo {
+  version: string;
+  url: string;
+}
+
+/** 检查 GitHub 是否有新版本。 */
+export async function checkUpdate(): Promise<UpdateInfo | null> {
+  try {
+    return await invoke<UpdateInfo | null>("check_update");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Tauri 命令 reject 时，错误体可能是结构化 DTO（已序列化为 JS 对象），
  * 也可能是裸字符串。统一规整为 `ArchiveErrorDto`。

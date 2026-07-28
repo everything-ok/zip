@@ -1,4 +1,4 @@
-//! ZIP 归档创建器（基于 `zip` crate，支持 AES 密码）。
+//! ZIP 归档创建器（基于 `zip` crate，支持 AES-256 密码）。
 
 use std::fs;
 use std::io::{Read, Write};
@@ -6,11 +6,9 @@ use std::path::Path;
 
 use anyhow::Context;
 
-use crate::error::ArchiveError;
 use crate::extractors::COPY_BUF;
 use crate::traits::{ArchiveCreator, CreateContext, CreateSource};
 use crate::types::{ArchiveFormat, ExtractSummary};
-use crate::ExtractSummary as Summary;
 
 pub struct ZipCreator;
 
@@ -29,9 +27,13 @@ impl ArchiveCreator for ZipCreator {
         let mut writer = zip::ZipWriter::new(file);
         // 压缩级别：0=存储，1-9；默认 6。
         let level = ctx.options.level.unwrap_or(6).clamp(0, 9);
-        let options = zip::write::SimpleFileOptions::default()
+        let mut options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated)
             .compression_level(Some(level as i64));
+        // 加密：优先 AES-256（zip crate aes-crypto feature 已启用）。
+        if let Some(password) = ctx.options.password.as_deref() {
+            options = options.with_aes_encryption(zip::AesMode::Aes256, password);
+        }
 
         // 先统计总字节用于进度。
         let mut total_bytes = 0u64;
@@ -45,7 +47,7 @@ impl ArchiveCreator for ZipCreator {
         }
         ctx.progress.on_start(paths.len(), total_bytes);
 
-        let mut summary = Summary {
+        let mut summary = ExtractSummary {
             entries_total: paths.len(),
             ..Default::default()
         };
@@ -102,10 +104,4 @@ impl ArchiveCreator for ZipCreator {
         writer.finish()?;
         Ok(summary)
     }
-}
-
-/// 将 `ArchiveError` 转为 `anyhow::Error` 的便捷别名（避免 unused import）。
-#[allow(dead_code)]
-fn _err(e: ArchiveError) -> anyhow::Error {
-    e.into()
 }

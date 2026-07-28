@@ -69,6 +69,8 @@ export function useExtract() {
             updateTask(id, {
               progress: e.indeterminate ? 0 : e.total ? e.processed / e.total : 0,
               indeterminate: e.indeterminate || e.total === 0,
+              speed: e.speed,
+              eta_secs: e.eta_secs,
             });
             break;
           case "finished":

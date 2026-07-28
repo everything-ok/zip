@@ -53,6 +53,12 @@ export interface ListRequest {
 
 export type OverwritePolicy = "skip" | "overwrite" | "rename" | "error";
 
+/// 文件关联/右键菜单启动动作。
+export type OpenArchiveAction =
+  | { action: "open"; path: string }
+  | { action: "extractHere"; path: string }
+  | { action: "extractToSubdir"; path: string };
+
 export type ProgressEvent =
   | { kind: "started"; total_entries: number; total_bytes: number }
   | { kind: "entry_start"; index: number; total: number; path: string; size: number }
@@ -62,6 +68,8 @@ export type ProgressEvent =
       processed: number;
       total: number;
       indeterminate: boolean;
+      speed: number;
+      eta_secs: number | null;
     }
   | { kind: "finished"; summary: SummaryDto }
   | { kind: "cancelled" }

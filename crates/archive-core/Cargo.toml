@@ -24,6 +24,7 @@ unrar = { workspace = true, optional = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true }
+encoding_rs = "0.8"
 
 [dev-dependencies]
 tempfile = "3"

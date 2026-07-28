@@ -21,6 +21,8 @@ export interface Task {
   error_code?: ArchiveErrorDto["code"];
   password?: string | null;
   overwrite: OverwritePolicy;
+  speed?: number;
+  eta_secs?: number | null;
 }
 
 export interface Settings {
