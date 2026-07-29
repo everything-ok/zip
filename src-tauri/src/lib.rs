@@ -14,8 +14,22 @@ use tauri::{Emitter, Manager};
 fn parse_open_action(args: &[String]) -> Option<OpenAction> {
     let mut iter = args.iter().skip(1);
     let archive_exts = [
-        ".zip", ".7z", ".rar", ".tar", ".gz", ".gzip", ".bz2", ".xz", ".zst", ".zstd", ".tgz",
-        ".tbz2", "tbz", ".txz", ".tzst", ".tzs",
+        ".zip",
+        ".7z",
+        ".rar",
+        ".tar",
+        ".gz",
+        ".gzip",
+        ".bz2",
+        ".xz",
+        ".zst",
+        ".zstd",
+        ".tgz",
+        ".tbz2",
+        ".tbz",
+        ".txz",
+        ".tzst",
+        ".tzs",
     ];
     while let Some(arg) = iter.next() {
         match arg.as_str() {
@@ -77,6 +91,8 @@ pub fn run() {
     builder = builder.setup(|app| {
         let args: Vec<String> = std::env::args().collect();
         if let Some(action) = parse_open_action(&args) {
+            // emit 用于 webview 已就绪的直接路径；若未就绪则前端 ready 后 pop 取回。
+            // 始终缓存：若 emit 失败/丢，前端 pop 兜底；若 emit 成功，前端拿到后应 pop 消费并去重。
             if let Ok(mut slot) = PENDING_OPEN.lock() {
                 *slot = Some(action.clone());
             }

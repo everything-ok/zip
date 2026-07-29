@@ -58,11 +58,12 @@ impl ArchiveCreator for ZipCreator {
                 summary.cancelled = true;
                 break;
             }
-            // 校验归档内路径，防注入。
-            let safe = crate::safety::sanitize_entry_path(&src.archive_path, Path::new(""))?;
+            // 校验归档内路径，防注入。末尾 '/' 标记空目录，去掉后创建目录条目。
+            let clean_path = src.archive_path.trim_end_matches('/');
+            let safe = crate::safety::sanitize_entry_path(clean_path, Path::new(""))?;
             let archive_path = safe.to_string_lossy().to_string();
 
-            if *is_dir {
+            if *is_dir || src.archive_path.ends_with('/') {
                 writer.add_directory(&archive_path, options)?;
                 summary.entries_extracted += 1;
                 ctx.progress.on_entry_done(index, 0);

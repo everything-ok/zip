@@ -119,7 +119,7 @@ impl ArchiveExtractor for RarExtractor {
 
         // 隔离解压目录与目标同卷，保证提交阶段可用原子 rename。
         let isolation = unique_isolation_dir(ctx.dest)?;
-        let mut isolation_guard = IsolationGuard::new(isolation.clone());
+        let isolation_guard = IsolationGuard::new(isolation.clone());
 
         let archive = match &ctx.options.password {
             Some(value) => unrar::Archive::with_password(ctx.source, value),
@@ -177,7 +177,7 @@ impl ArchiveExtractor for RarExtractor {
             }
         }
 
-        isolation_guard.commit();
+        // 隔离目录内容已全部提交到目标（move/copy），目录本身是垃圾，由 Drop 删除。
         Ok(summary)
     }
 }
@@ -233,10 +233,6 @@ struct IsolationGuard {
 impl IsolationGuard {
     fn new(path: PathBuf) -> Self {
         Self { path, keep: false }
-    }
-
-    fn commit(&mut self) {
-        self.keep = true;
     }
 
     fn remove_now(&self) -> std::io::Result<()> {

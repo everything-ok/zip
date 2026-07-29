@@ -71,7 +71,11 @@ impl ArchiveExtractor for ZipExtractor {
             let mut entry = match entry_result {
                 Ok(e) => e,
                 Err(zip::result::ZipError::InvalidPassword) => {
-                    anyhow::bail!(ArchiveError::PasswordRequired);
+                    if password.is_some() {
+                        anyhow::bail!(ArchiveError::WrongPassword);
+                    } else {
+                        anyhow::bail!(ArchiveError::PasswordRequired);
+                    }
                 }
                 Err(e) => return Err(e.into()),
             };
@@ -176,11 +180,20 @@ impl ZipExtractor {
             let mut entry = match entry_result {
                 Ok(entry) => entry,
                 Err(zip::result::ZipError::InvalidPassword) => {
-                    anyhow::bail!(ArchiveError::PasswordRequired)
+                    // 已提供密码却 InvalidPassword → 密码错误；未提供 → 需要密码。
+                    if password.is_some() {
+                        anyhow::bail!(ArchiveError::WrongPassword);
+                    } else {
+                        anyhow::bail!(ArchiveError::PasswordRequired);
+                    }
                 }
                 Err(error) => {
                     if error.to_string().to_ascii_lowercase().contains("password") {
-                        anyhow::bail!(ArchiveError::PasswordRequired);
+                        if password.is_some() {
+                            anyhow::bail!(ArchiveError::WrongPassword);
+                        } else {
+                            anyhow::bail!(ArchiveError::PasswordRequired);
+                        }
                     }
                     return Err(error.into());
                 }

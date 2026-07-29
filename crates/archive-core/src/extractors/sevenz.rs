@@ -296,12 +296,43 @@ fn sz_callback(
         state.abort = Some(error.into());
         return Ok(false);
     }
-    // 安全白名单：7z 归档可能含符号链接条目，当前安全模型只允许目录与普通文件。
-    // 非目录且无正常数据流（has_stream=false）的条目多为链接/空，跳过以防逃逸。
+    // 安全白名单：7z 归档可能含符号链接/反条目，当前安全模型只允许目录与普通文件。
+    // has_stream=false 且非目录：可能是空文件、链接、或反条目。
+    // - 反条目（is_anti_item）跳过；
+    // - size==0 的空普通文件创建空文件（与 list 一致）；
+    // - 其余（链接等无流条目）跳过防逃逸。
     if !is_directory && !entry.has_stream {
-        let _ = std::io::copy(reader, &mut std::io::sink());
-        state.summary.entries_skipped += 1;
-        state.progress.on_entry_done(state.idx, 0);
+        if entry.is_anti_item() {
+            drain_reader(reader, state, size);
+            state.idx += 1;
+            return Ok(true);
+        }
+        if size == 0 {
+            // 空普通文件：创建空文件。
+            match prepare_output(state.dest, &name, state.overwrite) {
+                Ok(Some(output)) => {
+                    if let Err(error) = output.commit() {
+                        state.abort = Some(error);
+                        return Ok(false);
+                    }
+                    state.summary.entries_extracted += 1;
+                    state.progress.on_entry_done(state.idx, 0);
+                }
+                Ok(None) => {
+                    state.summary.entries_skipped += 1;
+                    state.progress.on_entry_done(state.idx, 0);
+                }
+                Err(error) => {
+                    drain_reader(reader, state, size);
+                    state.abort = Some(error);
+                    return Ok(false);
+                }
+            }
+            state.idx += 1;
+            return Ok(true);
+        }
+        // 无流非空非目录非反条目：链接/设备，跳过防逃逸。
+        drain_reader(reader, state, size);
         state.idx += 1;
         return Ok(true);
     }
@@ -383,7 +414,42 @@ fn sz_callback(
 }
 
 fn drain_reader(reader: &mut dyn std::io::Read, state: &mut SzState, size: u64) {
-    let _ = std::io::copy(reader, &mut std::io::sink());
+    // 分块消费数据流，每轮检查取消与上限，防恶意大条目耗尽 CPU/磁盘。
+    let mut buf = vec![0u8; crate::extractors::COPY_BUF];
+    let mut consumed = 0u64;
+    loop {
+        if state.cancel.is_cancelled() {
+            state.cancelled = true;
+            return;
+        }
+        match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                consumed += n as u64;
+                if consumed > state.limits.max_file_bytes {
+                    state.abort = Some(
+                        crate::error::ArchiveError::FileTooLarge {
+                            actual: consumed,
+                            max: state.limits.max_file_bytes,
+                        }
+                        .into(),
+                    );
+                    return;
+                }
+                if state.bytes_done + consumed > state.limits.max_total_bytes {
+                    state.abort = Some(
+                        crate::error::ArchiveError::BombDetected {
+                            current: state.bytes_done + consumed,
+                            max: state.limits.max_total_bytes,
+                        }
+                        .into(),
+                    );
+                    return;
+                }
+            }
+            Err(_) => break,
+        }
+    }
     state.summary.entries_skipped += 1;
     state.progress.on_entry_done(state.idx, 0);
     // 跳过的条目仍计入累计进度，保证整体百分比连续。

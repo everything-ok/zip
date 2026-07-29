@@ -61,9 +61,11 @@ export default function App() {
   const loadFile = useCallback(
     async (p: string, suppliedPassword: string | null = null) => {
       const token = ++loadToken.current;
+      // 记忆密码：若未显式传密码，尝试从 localStorage 取回该归档的密码。
+      const effectivePassword = suppliedPassword ?? localStorage.getItem(`extractr-pw-${p}`);
       setFile(p);
       setEntries([]);
-      setPassword(suppliedPassword);
+      setPassword(effectivePassword);
       setFormat("");
       setLoadError(null);
       setLoading(true);
@@ -73,7 +75,7 @@ export default function App() {
             if (loadToken.current === token) setFormat(fmt);
           })
           .catch(() => {});
-        const list = await listArchive({ path: p, password: suppliedPassword });
+        const list = await listArchive({ path: p, password: effectivePassword });
         // 请求过期：丢弃本次结果，避免覆盖更新的文件预览。
         if (loadToken.current !== token) return;
         setEntries(list);
@@ -143,13 +145,17 @@ export default function App() {
   );
 
   useEffect(() => {
+    // 去重：监听到 emit 即标记，避免 ready 后 pop 重复执行同一动作。
+    let fired = false;
     const unlisten = listen<OpenArchiveAction>("open-archive", (e) => {
+      fired = true;
       const { action, path } = e.payload;
       applyAction(action, path);
     });
     // 兜底：若 emit 时 webview 未就绪导致丢失，前端 ready 后取回缓存动作。
+    // 仅当监听未收到时消费，避免重复执行。
     popPendingOpen().then((pending) => {
-      if (pending) applyAction(pending.action as never, pending.path);
+      if (pending && !fired) applyAction(pending.action as never, pending.path);
     });
     return () => {
       unlisten.then((fn) => fn());

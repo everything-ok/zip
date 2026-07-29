@@ -449,7 +449,16 @@ fn collect_sources(
             format!("{prefix}/{name}")
         };
         if entry.file_type()?.is_dir() {
-            collect_sources(&path, &archive_path, out)?;
+            // 空目录也要作为归档条目保留（创建器支持 add_directory/new_directory）。
+            if std::fs::read_dir(&path)?.next().is_none() {
+                let dir_archive_path = format!("{archive_path}/");
+                out.push(archive_core::traits::CreateSource {
+                    fs_path: path,
+                    archive_path: dir_archive_path,
+                });
+            } else {
+                collect_sources(&path, &archive_path, out)?;
+            }
         } else {
             out.push(archive_core::traits::CreateSource {
                 fs_path: path,
@@ -555,7 +564,8 @@ pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
     // tag_name 形如 "v0.2.0"，去掉前导 v 比较版本。
     let latest = tag.trim_start_matches('v').to_string();
     let current = env!("CARGO_PKG_VERSION");
-    if !latest.is_empty() && latest != current {
+    // 语义版本比较：仅当 latest > current 才提示更新，避免降级误报。
+    if newer_than(&latest, current) {
         Ok(Some(UpdateInfo {
             version: latest,
             url: safe_url,
@@ -563,6 +573,25 @@ pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
     } else {
         Ok(None)
     }
+}
+
+/// 简易语义版本比较：a 是否严格大于 b。解析 `major.minor.patch`，失败按字符串比较。
+fn newer_than(a: &str, b: &str) -> bool {
+    let parse = |s: &str| -> Vec<u64> {
+        s.split('.').filter_map(|p| p.parse::<u64>().ok()).collect()
+    };
+    let (av, bv) = (parse(a), parse(b));
+    if av.is_empty() || bv.is_empty() {
+        return a != b && a > b;
+    }
+    for i in 0..av.len().max(bv.len()) {
+        let an = av.get(i).copied().unwrap_or(0);
+        let bn = bv.get(i).copied().unwrap_or(0);
+        if an != bn {
+            return an > bn;
+        }
+    }
+    false
 }
 
 /// 更新信息 DTO。

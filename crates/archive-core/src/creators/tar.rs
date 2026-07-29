@@ -88,10 +88,13 @@ impl ArchiveCreator for TarCreator {
                 summary.cancelled = true;
                 break;
             }
-            let safe = crate::safety::sanitize_entry_path(&src.archive_path, Path::new(""))?;
+            let safe = crate::safety::sanitize_entry_path(
+                src.archive_path.trim_end_matches('/'),
+                Path::new(""),
+            )?;
             let archive_path = safe.to_string_lossy().to_string();
 
-            if *is_dir {
+            if *is_dir || src.archive_path.ends_with('/') {
                 builder.append_dir_all(&archive_path, &src.fs_path)?;
                 summary.entries_extracted += 1;
                 ctx.progress.on_entry_done(index, 0);
