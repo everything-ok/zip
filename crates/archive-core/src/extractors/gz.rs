@@ -71,6 +71,8 @@ impl ArchiveExtractor for GzExtractor {
         );
 
         let input = fs::File::open(ctx.source)?;
+        // 压缩后大小用于压缩比校验（解压炸弹防护：流式格式无法预知总量，用 ratio 兜底）。
+        let compressed_size = fs::metadata(ctx.source).map(|m| m.len()).unwrap_or(0);
         let decoder: Box<dyn Read> = match self {
             GzExtractor::Gzip => Box::new(flate2::read::GzDecoder::new(input)),
             GzExtractor::Bzip2 => Box::new(bzip2::read::BzDecoder::new(input)),
@@ -88,6 +90,18 @@ impl ArchiveExtractor for GzExtractor {
             &ctx.options.limits,
         ) {
             Ok(bytes) => {
+                // 压缩比校验：解压后 / 压缩前 超 max_ratio 视为解压炸弹。
+                if compressed_size > 0 {
+                    let ratio = bytes / compressed_size;
+                    if ratio > ctx.options.limits.max_ratio {
+                        // 提交前已超 ratio，拒绝提交，Drop 清理临时文件。
+                        return Err(crate::error::ArchiveError::BombDetected {
+                            current: bytes,
+                            max: ctx.options.limits.max_total_bytes,
+                        }
+                        .into());
+                    }
+                }
                 output.commit()?;
                 ctx.progress.on_entry_done(0, bytes);
                 Ok(ExtractSummary {

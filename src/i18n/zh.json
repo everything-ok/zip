@@ -32,8 +32,13 @@
     "clearRecent": "清空最近目录",
     "openDir": "打开所在目录",
     "retry": "重试",
+    "dismiss": "知道了",
     "on": "开",
     "off": "关"
+  },
+  "default": {
+    "guide": "将压缩文件设为默认用 Extractr 打开，双击即可解压。",
+    "setNow": "立即设置"
   },
   "preview": {
     "title": "文件列表",
@@ -42,6 +47,7 @@
     "compressed": "压缩后",
     "encrypted": "已加密",
     "empty": "选择或拖入压缩文件后查看内容",
+    "loading": "加载中…",
     "search": "搜索文件名…",
     "noMatch": "没有匹配的文件",
     "showAll": "显示全部 {{count}} 项",

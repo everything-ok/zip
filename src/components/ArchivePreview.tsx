@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { File, Folder, Lock, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { File, Folder, Lock, Search, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { EntryDto } from "../lib/types";
 import { formatBytes, basename, compressionRatio, formatTime } from "../lib/format";
@@ -41,10 +41,12 @@ export function ArchivePreview({
   path,
   format,
   entries,
+  loading = false,
 }: {
   path: string;
   format?: string;
   entries: EntryDto[];
+  loading?: boolean;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -172,7 +174,12 @@ export function ArchivePreview({
         </div>
       )}
       <div className="max-h-64 overflow-auto">
-        {entries.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-zinc-400">
+            <Loader2 size={16} className="animate-spin" />
+            <span>{t("preview.loading")}</span>
+          </div>
+        ) : entries.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-zinc-400">
             {t("preview.empty")}
           </div>

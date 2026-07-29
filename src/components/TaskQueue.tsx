@@ -112,11 +112,21 @@ export function TaskQueue() {
             {task.status === "running" && (
               <div className="mt-2">
                 {task.indeterminate ? (
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                  <div
+                    role="progressbar"
+                    aria-busy="true"
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+                  >
                     <div className="h-full w-1/3 animate-pulse bg-indigo-400" />
                   </div>
                 ) : (
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                  <div
+                    role="progressbar"
+                    aria-valuenow={Math.round(task.progress * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+                  >
                     <div
                       className="h-full bg-indigo-500 transition-all"
                       style={{ width: percent(task.progress) }}

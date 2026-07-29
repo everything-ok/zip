@@ -28,6 +28,9 @@ tokio = { version = "1", features = ["sync"] }
 anyhow = { workspace = true }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
+[dev-dependencies]
+tokio = { version = "1", features = ["sync", "macros", "rt"] }
+
 [profile.release]
 opt-level = "s"
 lto = true

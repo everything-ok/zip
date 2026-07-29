@@ -269,3 +269,22 @@ fn decode_zip_name(raw: &[u8]) -> String {
     let (cow, _, _) = encoding_rs::GBK.decode(raw);
     cow.into_owned()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::decode_zip_name;
+
+    #[test]
+    fn utf8_name_unchanged() {
+        assert_eq!(decode_zip_name("hello.txt".as_bytes()), "hello.txt");
+        assert_eq!(decode_zip_name("测试.txt".as_bytes()), "测试.txt");
+    }
+
+    #[test]
+    fn gbk_name_decoded() {
+        // "测试.txt" GBK 字节。
+        let gbk_bytes = b"\xb2\xe2\xca\xd4.txt";
+        assert_eq!(decode_zip_name(gbk_bytes), "测试.txt");
+    }
+}
+

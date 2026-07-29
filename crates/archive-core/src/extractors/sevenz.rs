@@ -296,6 +296,15 @@ fn sz_callback(
         state.abort = Some(error.into());
         return Ok(false);
     }
+    // 安全白名单：7z 归档可能含符号链接条目，当前安全模型只允许目录与普通文件。
+    // 非目录且无正常数据流（has_stream=false）的条目多为链接/空，跳过以防逃逸。
+    if !is_directory && !entry.has_stream {
+        let _ = std::io::copy(reader, &mut std::io::sink());
+        state.summary.entries_skipped += 1;
+        state.progress.on_entry_done(state.idx, 0);
+        state.idx += 1;
+        return Ok(true);
+    }
     let metadata = ArchiveEntry {
         path: name.clone(),
         size,

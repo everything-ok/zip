@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
-import { Package, ChevronLeft, AlertCircle } from "lucide-react";
+import { Package, ChevronLeft, AlertCircle, ExternalLink } from "lucide-react";
 import { Header } from "./components/Header";
 import { DropZone } from "./components/DropZone";
 import { ArchivePreview } from "./components/ArchivePreview";
@@ -15,9 +15,22 @@ import { useTheme } from "./hooks/useTheme";
 import { useDragDrop } from "./hooks/useDragDrop";
 import { useExtract } from "./hooks/useExtract";
 import { useAppStore } from "./store/useAppStore";
-import { listArchive, detectFormat, toArchiveError } from "./lib/ipc";
+import {
+  listArchive,
+  detectFormat,
+  toArchiveError,
+  popPendingOpen,
+  openDefaultAppsSettings,
+} from "./lib/ipc";
+import { describeError } from "./lib/errorMap";
 import { basename } from "./lib/format";
-import type { ArchiveErrorDto, EntryDto, OpenArchiveAction } from "./lib/types";
+import type {
+  ArchiveErrorDto,
+  EntryDto,
+  OpenArchiveAction,
+} from "./lib/types";
+
+const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
 
 export default function App() {
   useTheme();
@@ -32,9 +45,14 @@ export default function App() {
   const [format, setFormat] = useState("");
   const [password, setPassword] = useState<string | null>(null);
   const [askPassword, setAskPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<ArchiveErrorDto | null>(null);
+  // 首次启动引导：提示用户设 Extractr 为默认程序（仅显示一次）。
+  const [showDefaultGuide, setShowDefaultGuide] = useState(
+    () => !localStorage.getItem(DEFAULT_GUIDE_KEY)
+  );
 
   // 请求世代：只有最新一次选择的异步结果可以更新预览，防止 A→B 切换时
   // 旧请求迟到覆盖新预览。
@@ -59,6 +77,8 @@ export default function App() {
         // 请求过期：丢弃本次结果，避免覆盖更新的文件预览。
         if (loadToken.current !== token) return;
         setEntries(list);
+        // 密码正确后清错误。
+        setPasswordError(null);
         const dir = p.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
         const name = basename(p).replace(/\.[^.]+$/, "");
         setDest(`${dir}/${name}`);
@@ -66,6 +86,7 @@ export default function App() {
         if (loadToken.current !== token) return;
         const dto = toArchiveError(err);
         if (dto.code === "password_required" || dto.code === "wrong_password") {
+          setPasswordError(describeError(dto, t));
           setAskPassword(true);
         } else {
           setLoadError(dto);
@@ -102,27 +123,43 @@ export default function App() {
   const runRef = useRef(run);
   loadFileRef.current = loadFile;
   runRef.current = run;
-  useEffect(() => {
-    const unlisten = listen<OpenArchiveAction>("open-archive", (e) => {
-      const { action, path } = e.payload;
+
+  const applyAction = useCallback(
+    (action: OpenArchiveAction["action"], path: string) => {
       if (!path) return;
       if (action === "open") {
         void loadFileRef.current(path);
       } else if (action === "extractHere") {
-        // 解压到归档所在目录。
+        // 解压到归档所在目录（加密归档会被后端拒绝，前端 loadFile 探测密码）。
         const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
         void runRef.current(path, dir || ".", null, settings.overwrite);
       } else if (action === "extractToSubdir") {
-        // 解压到同名子目录。
         const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
         const name = basename(path).replace(/\.[^.]+$/, "");
         void runRef.current(path, `${dir}/${name}`, null, settings.overwrite);
       }
+    },
+    [settings.overwrite]
+  );
+
+  useEffect(() => {
+    const unlisten = listen<OpenArchiveAction>("open-archive", (e) => {
+      const { action, path } = e.payload;
+      applyAction(action, path);
+    });
+    // 兜底：若 emit 时 webview 未就绪导致丢失，前端 ready 后取回缓存动作。
+    popPendingOpen().then((pending) => {
+      if (pending) applyAction(pending.action as never, pending.path);
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [settings.overwrite]);
+  }, [applyAction]);
+
+  const dismissDefaultGuide = () => {
+    localStorage.setItem(DEFAULT_GUIDE_KEY, "1");
+    setShowDefaultGuide(false);
+  };
 
   const { hovering } = useDragDrop(handleDrop);
 
@@ -139,6 +176,24 @@ export default function App() {
   return (
     <div className="relative flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <Header onOpenSettings={() => setShowSettings(true)} />
+      {showDefaultGuide && !file && (
+        <div className="flex items-center gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-2 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+          <ExternalLink size={15} className="shrink-0" />
+          <span className="flex-1">{t("default.guide")}</span>
+          <button
+            onClick={() => void openDefaultAppsSettings()}
+            className="shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500"
+          >
+            {t("default.setNow")}
+          </button>
+          <button
+            onClick={dismissDefaultGuide}
+            className="shrink-0 text-xs text-indigo-400 hover:text-indigo-600"
+          >
+            {t("common.dismiss")}
+          </button>
+        </div>
+      )}
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-5">
         {file ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -159,10 +214,10 @@ export default function App() {
             {loadError && (
               <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                <span className="break-all">{loadError.message}</span>
+                <span className="break-all">{describeError(loadError, t)}</span>
               </div>
             )}
-            <ArchivePreview path={file} format={format} entries={entries} />
+            <ArchivePreview path={file} format={format} entries={entries} loading={loading} />
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-zinc-500">
                 {t("dest.label")}
@@ -198,10 +253,20 @@ export default function App() {
       )}
       <PasswordPrompt
         open={askPassword}
-        onClose={() => setAskPassword(false)}
-        onSubmit={(pw) => {
+        onClose={() => {
           setAskPassword(false);
-          if (file) void loadFile(file, pw);
+          setPasswordError(null);
+        }}
+        error={passwordError}
+        onSubmit={(pw, remember) => {
+          setAskPassword(false);
+          setPasswordError(null);
+          if (file) {
+            void loadFile(file, pw);
+            if (remember) {
+              localStorage.setItem(`extractr-pw-${file}`, pw);
+            }
+          }
         }}
       />
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />

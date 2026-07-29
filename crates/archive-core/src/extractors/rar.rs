@@ -387,7 +387,15 @@ fn copy_dir_recursive(source: &Path, target: &Path) -> anyhow::Result<()> {
         let entry = entry?;
         let source_path = entry.path();
         let target_path = target.join(entry.file_name());
-        if entry.file_type()?.is_dir() {
+        let file_type = entry.file_type()?;
+        // 安全：拒绝符号链接，防 unrar 在隔离目录创建指向外部的链接导致逃逸。
+        if file_type.is_symlink() {
+            anyhow::bail!(crate::error::ArchiveError::PathTraversal(format!(
+                "拒绝符号链接条目: {}",
+                source_path.display()
+            )));
+        }
+        if file_type.is_dir() {
             copy_dir_recursive(&source_path, &target_path)?;
         } else {
             fs::copy(&source_path, &target_path)?;

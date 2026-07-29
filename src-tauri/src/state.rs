@@ -63,6 +63,7 @@ impl AppState {
 }
 
 /// 注册任务失败原因。
+#[derive(Debug)]
 pub enum RegisterError {
     /// task_id 已存在（旧任务令牌）。
     Duplicate(Arc<AtomicBool>),

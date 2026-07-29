@@ -398,7 +398,13 @@ fn convert_impl(
         progress,
         cancel,
     };
-    extractor.extract(&ctx)?;
+    extractor
+        .extract(&ctx)
+        .map_err(|e| {
+            // 解压失败时清理临时目录，避免残留。
+            let _ = std::fs::remove_dir_all(&tmp);
+            e
+        })?;
 
     // 阶段二：收集临时目录文件作为创建源。
     let mut sources: Vec<archive_core::traits::CreateSource> = Vec::new();
@@ -417,7 +423,12 @@ fn convert_impl(
         progress,
         cancel,
     };
-    let summary = creator.create(&create_ctx)?;
+    let summary = creator
+        .create(&create_ctx)
+        .map_err(|e| {
+            let _ = std::fs::remove_dir_all(&tmp);
+            e
+        })?;
     let _ = std::fs::remove_dir_all(&tmp);
     Ok(summary)
 }
@@ -532,13 +543,22 @@ pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
         .and_then(|v| v.as_str())
         .unwrap_or("https://github.com/everything-ok/zip/releases")
         .to_string();
+    // 安全校验：仅允许 github.com 域名，防止 API 被篡改后引导用户访问恶意 URL。
+    let safe_url = if html_url
+        .starts_with("https://github.com/")
+        || html_url.starts_with("https://www.github.com/")
+    {
+        html_url
+    } else {
+        "https://github.com/everything-ok/zip/releases".to_string()
+    };
     // tag_name 形如 "v0.2.0"，去掉前导 v 比较版本。
     let latest = tag.trim_start_matches('v').to_string();
     let current = env!("CARGO_PKG_VERSION");
     if !latest.is_empty() && latest != current {
         Ok(Some(UpdateInfo {
             version: latest,
-            url: html_url,
+            url: safe_url,
         }))
     } else {
         Ok(None)
@@ -550,6 +570,54 @@ pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
 pub struct UpdateInfo {
     pub version: String,
     pub url: String,
+}
+
+/// 前端 ready 后取回首启动作（文件关联/右键启动时 emit 可能因 webview 未就绪丢失）。
+/// 返回 `Some(action)` 表示有待处理动作，前端据此加载；`None` 表示无。
+#[tauri::command]
+pub async fn pop_pending_open() -> Result<Option<PendingOpenDto>, String> {
+    let action = crate::PENDING_OPEN
+        .lock()
+        .map_err(|e| e.to_string())?
+        .take();
+    let dto = action.map(|a| {
+        let (action_str, path) = match a {
+            crate::OpenAction::Open { path } => ("open", path),
+            crate::OpenAction::ExtractHere { path } => ("extractHere", path),
+            crate::OpenAction::ExtractToSubdir { path } => ("extractToSubdir", path),
+        };
+        PendingOpenDto {
+            action: action_str.to_string(),
+            path,
+        }
+    });
+    Ok(dto)
+}
+
+/// 待处理首启动作 DTO（前端消费）。
+#[derive(serde::Serialize)]
+pub struct PendingOpenDto {
+    pub action: String,
+    pub path: String,
+}
+
+/// 打开系统"默认应用"设置页（ms-settings:defaultapps），供前端引导设默认程序。
+#[tauri::command]
+pub async fn open_default_apps_settings() -> Result<(), String> {
+    // Windows：ms-settings:defaultapps 深链。
+    // 跨平台兜底：opener 插件打开。
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "ms-settings:defaultapps"])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = tauri_plugin_opener::open_path("defaultapps", None::<&str>);
+    }
+    Ok(())
 }
 
 fn parse_options(req: &ExtractRequest) -> ExtractOptions {

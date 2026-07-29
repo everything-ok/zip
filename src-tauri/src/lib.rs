@@ -5,6 +5,8 @@ pub mod commands;
 pub mod events;
 pub mod state;
 
+use std::sync::Mutex;
+
 use tauri::{Emitter, Manager};
 
 /// 从 argv 解析右键菜单动作与归档路径。
@@ -28,7 +30,6 @@ fn parse_open_action(args: &[String]) -> Option<OpenAction> {
                 }
             }
             _ => {
-                // 裸路径：归档文件则打开预览。
                 let lower = arg.to_ascii_lowercase();
                 if archive_exts.iter().any(|ext| lower.ends_with(ext))
                     && std::path::Path::new(arg).is_file()
@@ -49,6 +50,10 @@ enum OpenAction {
     ExtractToSubdir { path: String },
 }
 
+/// 缓存首启动作：文件关联/右键启动时 webview 可能尚未加载完成，
+/// emit 会丢失；前端 ready 后会调用 `pop_pending_open` 取回。
+static PENDING_OPEN: Mutex<Option<OpenAction>> = Mutex::new(None);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
@@ -64,12 +69,17 @@ pub fn run() {
             commands::convert_archive,
             commands::test_archive,
             commands::check_update,
+            commands::pop_pending_open,
         ]);
 
-    // 处理文件关联/右键菜单启动参数，解析动作并 emit open-archive 事件。
+    // 处理文件关联/右键菜单启动参数：解析动作后缓存到 PENDING_OPEN，
+    // 并尝试立即 emit（若 webview 已就绪则直接收到，否则前端 ready 后 pop）。
     builder = builder.setup(|app| {
         let args: Vec<String> = std::env::args().collect();
         if let Some(action) = parse_open_action(&args) {
+            if let Ok(mut slot) = PENDING_OPEN.lock() {
+                *slot = Some(action.clone());
+            }
             let window = app.get_webview_window("main");
             if let Some(window) = window {
                 let _ = window.emit("open-archive", action);

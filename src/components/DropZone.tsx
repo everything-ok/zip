@@ -27,9 +27,12 @@ export function DropZone({
             "bz2",
             "xz",
             "zst",
+            "zstd",
             "tgz",
             "tbz2",
             "txz",
+            "tzst",
+            "tzs",
           ],
         },
       ],
@@ -41,6 +44,7 @@ export function DropZone({
     <div className="flex flex-1 items-center justify-center p-8">
       <button
         onClick={pick}
+        aria-label={t("drop.hint")}
         className={`group flex w-full max-w-xl flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-8 py-16 text-center transition-colors ${
           hovering
             ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"

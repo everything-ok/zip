@@ -46,6 +46,30 @@ export interface UpdateInfo {
   url: string;
 }
 
+/// 后端缓存的首启动作（文件关联/右键启动时前端 ready 前可能丢 emit）。
+export interface PendingOpenDto {
+  action: "open" | "extractHere" | "extractToSubdir";
+  path: string;
+}
+
+/** 前端 ready 后取回缓存的首启动作。 */
+export async function popPendingOpen(): Promise<PendingOpenDto | null> {
+  try {
+    return await invoke<PendingOpenDto | null>("pop_pending_open");
+  } catch {
+    return null;
+  }
+}
+
+/** 打开系统"默认应用"设置页（引导用户设 Extractr 为默认）。 */
+export async function openDefaultAppsSettings(): Promise<void> {
+  try {
+    await invoke("open_default_apps_settings");
+  } catch {
+    /* ignore */
+  }
+}
+
 /** 检查 GitHub 是否有新版本。 */
 export async function checkUpdate(): Promise<UpdateInfo | null> {
   try {
