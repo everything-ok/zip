@@ -129,16 +129,17 @@ export default function App() {
   const applyAction = useCallback(
     (action: OpenArchiveAction["action"], path: string) => {
       if (!path) return;
+      // 右键菜单已简化为只"用 Extractr 打开"（open），进预览后由 UI 配置目标/覆盖策略/密码。
+      // 旧版 argv 的 extractHere/extractToSubdir 仍兼容处理（直接解压，不再有 UI 配置）。
       if (action === "open") {
         void loadFileRef.current(path);
-      } else if (action === "extractHere") {
-        // 解压到归档所在目录（加密归档会被后端拒绝，前端 loadFile 探测密码）。
+      } else if (action === "extractHere" || action === "extractToSubdir") {
         const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
-        void runRef.current(path, dir || ".", null, settings.overwrite);
-      } else if (action === "extractToSubdir") {
-        const dir = path.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
-        const name = basename(path).replace(/\.[^.]+$/, "");
-        void runRef.current(path, `${dir}/${name}`, null, settings.overwrite);
+        const target =
+          action === "extractHere"
+            ? dir || "."
+            : `${dir}/${basename(path).replace(/\.[^.]+$/, "")}`;
+        void runRef.current(path, target, null, settings.overwrite);
       }
     },
     [settings.overwrite]

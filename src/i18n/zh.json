@@ -3,6 +3,17 @@
     "title": "Extractr",
     "subtitle": "轻量解压工具"
   },
+  "info": {
+    "supported": "支持格式",
+    "extractDesc": "Extractr 支持解压以下压缩格式：",
+    "extractFormats": "可解压",
+    "createFormats": "可创建",
+    "featureHint": "右键压缩包选「用 Extractr 打开」，在界面中配置目标目录、覆盖策略、密码后再解压。"
+  },
+  "feedback": {
+    "title": "反馈问题",
+    "hint": "遇到问题或有建议？欢迎在 GitHub Issues 提交。"
+  },
   "about": {
     "title": "关于",
     "desc": "Extractr 是一款轻量、安全、跨平台的解压工具，支持 ZIP、RAR、7z、TAR 等主流格式。",

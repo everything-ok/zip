@@ -74,15 +74,19 @@ export function useExtract() {
             });
             break;
           case "finished":
+            // 先把进度条动画走到 100%，延迟打开目录，避免与完成态切换抖动叠加。
             updateTask(id, {
-              status: "done",
               progress: 1,
               indeterminate: false,
               summary: e.summary,
             });
-            if (autoOpenDir) {
-              void revealInDir(dest).catch(() => {});
-            }
+            // 让进度条补间动画完成后再切完成态 + 开目录，过渡更自然。
+            window.setTimeout(() => {
+              updateTask(id, { status: "done" });
+              if (autoOpenDir) {
+                void revealInDir(dest).catch(() => {});
+              }
+            }, 450);
             break;
           case "cancelled":
             updateTask(id, { status: "cancelled" });

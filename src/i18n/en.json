@@ -3,6 +3,17 @@
     "title": "Extractr",
     "subtitle": "Lightweight Extractor"
   },
+  "info": {
+    "supported": "Supported formats",
+    "extractDesc": "Extractr can extract the following formats:",
+    "extractFormats": "Extract",
+    "createFormats": "Create",
+    "featureHint": "Right-click an archive → “Open with Extractr”, then set destination, overwrite policy and password in the UI."
+  },
+  "feedback": {
+    "title": "Feedback",
+    "hint": "Found a bug or have a suggestion? Open an issue on GitHub."
+  },
   "about": {
     "title": "About",
     "desc": "Extractr is a lightweight, secure, cross-platform archive extractor supporting ZIP, RAR, 7z, TAR and more.",

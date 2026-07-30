@@ -8,6 +8,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { useAppStore } from "../store/useAppStore";
 import { useExtract } from "../hooks/useExtract";
 import { revealInDir } from "../lib/ipc";
@@ -117,7 +118,15 @@ export function TaskQueue() {
                     aria-busy="true"
                     className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
                   >
-                    <div className="h-full w-1/3 animate-pulse bg-indigo-400" />
+                    <motion.div
+                      animate={{ x: ["-100%", "300%"] }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1.4,
+                        ease: "easeInOut",
+                      }}
+                      className="h-full w-1/3 rounded-full bg-indigo-400"
+                    />
                   </div>
                 ) : (
                   <div
@@ -127,9 +136,11 @@ export function TaskQueue() {
                     aria-valuemax={100}
                     className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
                   >
-                    <div
-                      className="h-full bg-indigo-500 transition-all"
-                      style={{ width: percent(task.progress) }}
+                    <motion.div
+                      className="h-full rounded-full bg-indigo-500"
+                      initial={false}
+                      animate={{ width: percent(task.progress) }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
                 )}

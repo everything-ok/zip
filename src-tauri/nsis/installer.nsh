@@ -1,19 +1,10 @@
 ; Extractr NSIS 安装钩子：注册文件关联、右键菜单。
 ; 安装模式为 currentUser，所有项写入 HKCU，卸载时由 PreUninstall 钩子清理。
-; 右键动作通过 argv 传动作参数：--extract-here / --extract-to-subdir / 裸路径（打开）。
+; 右键只保留"用 Extractr 打开"：打开后在 UI 中配置目标/覆盖策略/密码，最灵活。
+; 兼容清理：卸载时仍删旧版的 ExtractrHere/ExtractrSubdir（v0.2.1 前注册过）。
 
-; ===== 顶层宏：单个扩展名的右键三动作注册（避免宏内定义宏）=====
+; ===== 顶层宏：单扩展名右键"用 Extractr 打开" =====
 !macro EXTR_REG_EXT EXT
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere" "" "解压到此处"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere" "Position" "Top"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere" "Icon" "$INSTDIR\Extractr.exe"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere\command" "" '"$INSTDIR\Extractr.exe" "--extract-here" "%1"'
-
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir" "" "解压到同名子目录"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir" "Position" "Top"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir" "Icon" "$INSTDIR\Extractr.exe"
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir\command" "" '"$INSTDIR\Extractr.exe" "--extract-to-subdir" "%1"'
-
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "" "用 Extractr 打开"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "Position" "Top"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "Icon" "$INSTDIR\Extractr.exe"
@@ -21,6 +12,7 @@
 !macroend
 
 !macro EXTR_UNREG_EXT EXT
+  ; 兼容删旧版三动作。
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere"
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir"
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen"
