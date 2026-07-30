@@ -398,7 +398,7 @@ fn convert_impl(
         progress,
         cancel,
     };
-    extractor
+    let extract_summary = extractor
         .extract(&ctx)
         .map_err(|e| {
             // 解压失败时清理临时目录，避免残留。
@@ -406,12 +406,24 @@ fn convert_impl(
             e
         })?;
 
+    // 解压被取消：不继续创建残缺归档，清理并返回取消。
+    if extract_summary.cancelled {
+        let _ = std::fs::remove_dir_all(&tmp);
+        return Ok(extract_summary);
+    }
+
     // 阶段二：收集临时目录文件作为创建源。
     let mut sources: Vec<archive_core::traits::CreateSource> = Vec::new();
-    collect_sources(&tmp, "", &mut sources)?;
+    collect_sources(&tmp, "", &mut sources).map_err(|e| {
+        let _ = std::fs::remove_dir_all(&tmp);
+        e
+    })?;
 
     // 阶段三：创建目标归档。
-    let creator = creators::creator_for_path(dest)?;
+    let creator = creators::creator_for_path(dest).map_err(|e| {
+        let _ = std::fs::remove_dir_all(&tmp);
+        e
+    })?;
     let create_opts = archive_core::traits::CreateOptions {
         password: dest_password,
         level,
@@ -531,7 +543,7 @@ pub async fn test_archive(
 pub async fn check_update() -> Result<Option<UpdateInfo>, String> {
     let url = "https://api.github.com/repos/everything-ok/zip/releases/latest";
     let client = reqwest::Client::builder()
-        .user_agent("Extractr-Updater/0.2.0")
+        .user_agent(format!("Extractr-Updater/{}", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| e.to_string())?;
     let resp = client
@@ -718,13 +730,21 @@ pub async fn send_feedback(req: FeedbackRequest) -> Result<(), String> {
             );
 
             for img_path in &req.images {
+                // 图片单文件上限 10MB，防 OOM 与 SMTP 体积超限。
+                if let Ok(meta) = std::fs::metadata(img_path) {
+                    if meta.len() > 10 * 1024 * 1024 {
+                        continue;
+                    }
+                }
                 if let Ok(data) = std::fs::read(img_path) {
                     let name = std::path::Path::new(img_path)
                         .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or("image.png");
+                    // 按扩展名映射 MIME，避免 jpg/gif/webp 被标 image/png。
+                    let mime = mime_by_ext(img_path);
                     let attachment = Attachment::new(name.to_string())
-                        .body(data, ContentType::parse("image/png").unwrap());
+                        .body(data, ContentType::parse(&mime).unwrap_or(ContentType::TEXT_PLAIN));
                     mp = mp.singlepart(attachment);
                 }
             }
@@ -765,4 +785,22 @@ pub async fn send_feedback(req: FeedbackRequest) -> Result<(), String> {
 #[tauri::command]
 pub async fn file_size(path: String) -> Result<u64, String> {
     Ok(std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0))
+}
+
+/// 按扩展名返回图片 MIME 类型。
+fn mime_by_ext(path: &str) -> &'static str {
+    let lower = path.to_ascii_lowercase();
+    if lower.ends_with(".png") {
+        "image/png"
+    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
+        "image/jpeg"
+    } else if lower.ends_with(".gif") {
+        "image/gif"
+    } else if lower.ends_with(".bmp") {
+        "image/bmp"
+    } else if lower.ends_with(".webp") {
+        "image/webp"
+    } else {
+        "application/octet-stream"
+    }
 }

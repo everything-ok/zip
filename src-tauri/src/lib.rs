@@ -44,9 +44,11 @@ fn parse_open_action(args: &[String]) -> Option<OpenAction> {
                 }
             }
             "--compress" => {
-                // 压缩目标通常是目录，不走 archive_exts 校验。
+                // 压缩目标通常是目录；校验路径存在，避免面板预填不存在的路径。
                 if let Some(path) = iter.next() {
-                    return Some(OpenAction::Compress { path: path.clone() });
+                    if std::path::Path::new(path).exists() {
+                        return Some(OpenAction::Compress { path: path.clone() });
+                    }
                 }
             }
             _ => {

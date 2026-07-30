@@ -338,9 +338,9 @@ fn commit_isolation(
             continue;
         };
 
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)?;
-        }
+        // 父目录走安全目录校验（逐级符号链接检测），与其他 extractor 一致。
+        let parent_relative = relative.parent().unwrap_or_else(|| std::path::Path::new(""));
+        ensure_safe_directory(ctx.dest, parent_relative)?;
         // 同卷原子移动。若目标已存在且策略要求覆盖，Windows 不允许跨文件 rename
         // 覆盖，这里用“先备份旧文件再移动”的安全提交，失败时恢复旧文件。
         move_safely(&source_in_isolation, &target)?;

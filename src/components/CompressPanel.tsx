@@ -28,11 +28,16 @@ export function CompressPanel({
       ? [{ fs_path: initialSource, archive_path: basename(initialSource) }]
       : []
   );
-  // 预填目标目录为源所在目录。
-  const [dest, setDest] = useState(() =>
-    initialSource
-      ? initialSource.replace(/\\/g, "/").split("/").slice(0, -1).join("/")
-      : ""
+  // 预填目标目录为源所在目录（用 dirname 逻辑，避免 split 对根路径/UNC 残缺）。
+  const [dest, setDest] = useState(() => {
+    if (!initialSource) return "";
+    const norm = initialSource.replace(/\\/g, "/");
+    const idx = norm.lastIndexOf("/");
+    return idx > 0 ? norm.slice(0, idx) : norm;
+  });
+  // 默认输出名用源 basename，避免重复压缩互相覆盖。
+  const [outName, setOutName] = useState(() =>
+    initialSource ? basename(initialSource) : "archive"
   );
   const [format, setFormat] = useState<Format>("zip");
   const [password, setPassword] = useState("");
@@ -70,8 +75,10 @@ export function CompressPanel({
 
   const submit = () => {
     if (sources.length === 0 || !dest) return;
+    // 输出名用源 basename（或用户填的 outName），加格式扩展名。
+    const name = (outName || "archive").replace(/\.[^.]+$/, "");
     void create(
-      `${dest.replace(/\\/g, "/").replace(/\/$/, "")}/archive.${format}`,
+      `${dest.replace(/\\/g, "/").replace(/\/$/, "")}/${name}.${format}`,
       sources,
       password || null,
       level

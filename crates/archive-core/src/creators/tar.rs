@@ -64,6 +64,8 @@ impl ArchiveCreator for TarCreator {
             TarCompression::Xz => Box::new(xz2::write::XzEncoder::new(file, level as u32)),
         };
         let mut builder = tar::Builder::new(writer);
+        // 安全：不跟随符号链接，防归档内植入指向外部的符号链接导致敏感文件被打包。
+        builder.follow_symlinks(false);
 
         // 统计总字节用于进度。
         let mut total_bytes = 0u64;
@@ -120,6 +122,14 @@ impl ArchiveCreator for TarCreator {
             header.set_path(&archive_path)?;
             header.set_size(size);
             header.set_mode(0o644);
+            // 保留源文件修改时间，避免解压后全部变成 epoch。
+            if let Ok(meta) = fs::metadata(&src.fs_path) {
+                if let Ok(mtime) = meta.modified() {
+                    if let Ok(dur) = mtime.duration_since(std::time::UNIX_EPOCH) {
+                        header.set_mtime(dur.as_secs());
+                    }
+                }
+            }
             header.set_cksum();
             let cancel_reader = CancelReader::new(&mut input, ctx.cancel);
             builder.append(&header, cancel_reader)?;

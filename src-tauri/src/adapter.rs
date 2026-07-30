@@ -16,6 +16,8 @@ pub struct ChannelSink {
     last_bytes_emit: StdMutex<Option<Instant>>,
     // 速度计算状态：上次进度的时间与已处理字节。
     speed_state: StdMutex<Option<(Instant, u64)>>,
+    // entry 事件节流：合并发送，避免海量小文件 IPC 过载。
+    last_entry_emit: StdMutex<Option<Instant>>,
 }
 
 impl ChannelSink {
@@ -24,6 +26,7 @@ impl ChannelSink {
             ch,
             last_bytes_emit: StdMutex::new(None),
             speed_state: StdMutex::new(None),
+            last_entry_emit: StdMutex::new(None),
         }
     }
 
@@ -43,16 +46,36 @@ impl ProgressSink for ChannelSink {
     }
 
     fn on_entry_start(&self, idx: usize, total: usize, e: &ArchiveEntry) {
-        self.emit(ProgressEvent::EntryStart {
-            index: idx,
-            total,
-            path: e.path.clone(),
-            size: e.size,
-        });
+        // 节流：每 40ms 最多发一次，避免 10 万小文件归档 IPC 过载。
+        let now = Instant::now();
+        let mut last = self.last_entry_emit.lock().unwrap();
+        let should = last
+            .map(|t| now.duration_since(t) >= Duration::from_millis(40))
+            .unwrap_or(true);
+        if should {
+            *last = Some(now);
+            drop(last);
+            self.emit(ProgressEvent::EntryStart {
+                index: idx,
+                total,
+                path: e.path.clone(),
+                size: e.size,
+            });
+        }
     }
 
     fn on_entry_done(&self, idx: usize, _bytes_written: u64) {
-        self.emit(ProgressEvent::EntryDone { index: idx });
+        // 同样节流，避免每个条目都 emit。
+        let now = Instant::now();
+        let mut last = self.last_entry_emit.lock().unwrap();
+        let should = last
+            .map(|t| now.duration_since(t) >= Duration::from_millis(40))
+            .unwrap_or(true);
+        if should {
+            *last = Some(now);
+            drop(last);
+            self.emit(ProgressEvent::EntryDone { index: idx });
+        }
     }
 
     fn on_progress(&self, processed: u64, total: u64) {

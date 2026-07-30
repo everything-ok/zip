@@ -30,17 +30,23 @@ impl ArchiveCreator for SevenZCreator {
         // 加密：加密头部 + 内容用 AES256_SHA256 + LZMA2 链式编码。
         let password = ctx.options.password.as_deref();
         let has_password = password.is_some();
+        let level = ctx.options.level.unwrap_or(6).clamp(0, 9) as u32;
+        let lzma2_cfg = sevenz_rust2::EncoderConfiguration::new(
+            sevenz_rust2::EncoderMethod::LZMA2,
+        )
+        .with_options(sevenz_rust2::encoder_options::EncoderOptions::Lzma2(
+            sevenz_rust2::encoder_options::Lzma2Options::from_level(level),
+        ));
         if has_password {
             writer.set_encrypt_header(true);
             // 内容方法：LZMA2 压缩 + AES256 加密。
             let pw = sevenz_rust2::Password::from(password.unwrap());
-            let methods: Vec<sevenz_rust2::EncoderConfiguration> = vec![
-                sevenz_rust2::EncoderConfiguration::new(sevenz_rust2::EncoderMethod::LZMA2),
-                sevenz_rust2::encoder_options::AesEncoderOptions::new(pw).into(),
-            ];
+            let methods: Vec<sevenz_rust2::EncoderConfiguration> =
+                vec![lzma2_cfg, sevenz_rust2::encoder_options::AesEncoderOptions::new(pw).into()];
             writer.set_content_methods(methods);
         } else {
             writer.set_encrypt_header(false);
+            writer.set_content_methods(vec![lzma2_cfg]);
         }
 
         // 统计总字节用于进度。

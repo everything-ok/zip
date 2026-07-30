@@ -34,6 +34,12 @@ impl ArchiveExtractor for SevenZExtractor {
                     ArchiveError::Corrupt(format!("读取 7z 头部失败: {error}"))
                 }
             })?;
+        // 从 blocks 检测真实加密标志：任一 block 含 AES256 编码器即视为加密。
+        let actually_encrypted = archive.blocks.iter().any(|b| {
+            b.coders.iter().any(|c| {
+                c.encoder_method_id() == sevenz_rust2::EncoderMethod::ID_AES256_SHA256
+            })
+        });
         let mut entries = Vec::new();
         for file in &archive.files {
             entries.push(ArchiveEntry {
@@ -41,7 +47,7 @@ impl ArchiveExtractor for SevenZExtractor {
                 size: file.size,
                 compressed_size: file.compressed_size,
                 is_dir: file.is_directory(),
-                is_encrypted: password.is_some(),
+                is_encrypted: actually_encrypted,
                 modified: None,
             });
         }

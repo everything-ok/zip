@@ -10,10 +10,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button, Modal } from "./ui";
 import { FeedbackModal } from "./FeedbackModal";
-import logoUrl from "../assets/logo.svg";
+import logoUrl from "../assets/logo.gif";
 import { openUrlNative, checkUpdate, type UpdateInfo } from "../lib/ipc";
 
-const APP_VERSION = "0.2.4";
+const APP_VERSION = "0.2.5";
 const ISSUES_URL = "https://github.com/everything-ok/zip/issues";
 
 export function Header({
