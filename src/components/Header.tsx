@@ -8,9 +8,9 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal } from "./ui";
-import { openPathNative, checkUpdate, type UpdateInfo } from "../lib/ipc";
+import { openUrlNative, checkUpdate, type UpdateInfo } from "../lib/ipc";
 
-const APP_VERSION = "0.2.2";
+const APP_VERSION = "0.2.3";
 const ISSUES_URL = "https://github.com/everything-ok/zip/issues";
 
 export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -47,7 +47,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="flex items-center gap-1">
           {update && (
             <button
-              onClick={() => void openPathNative(update.url).catch(() => {})}
+              onClick={() => void openUrlNative(update.url).catch(() => {})}
               title={t("update.available", { version: update.version })}
               className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300"
             >
@@ -56,7 +56,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           )}
           <Button
             variant="ghost"
-            onClick={() => void openPathNative(ISSUES_URL).catch(() => {})}
+            onClick={() => void openUrlNative(ISSUES_URL).catch(() => {})}
             aria-label={t("feedback.title")}
             title={t("feedback.title")}
             className="px-2.5"
@@ -162,7 +162,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           <p className="leading-relaxed">{t("about.desc")}</p>
           <button
-            onClick={() => void openPathNative(ISSUES_URL).catch(() => {})}
+            onClick={() => void openUrlNative(ISSUES_URL).catch(() => {})}
             className="flex items-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
           >
             <MessageSquare size={14} />

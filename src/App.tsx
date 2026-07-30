@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
-import { Package, ChevronLeft, AlertCircle, ExternalLink } from "lucide-react";
+import {
+  Package,
+  ChevronLeft,
+  AlertCircle,
+  ExternalLink,
+  Archive,
+} from "lucide-react";
 import { Header } from "./components/Header";
 import { DropZone } from "./components/DropZone";
 import { ArchivePreview } from "./components/ArchivePreview";
@@ -29,6 +35,7 @@ import type {
   EntryDto,
   OpenArchiveAction,
 } from "./lib/types";
+import { CompressFab } from "./components/CompressFab";
 
 const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
 
@@ -36,6 +43,7 @@ export default function App() {
   useTheme();
   const { t } = useTranslation();
   const { run } = useExtract();
+  const { create: createArchive } = useExtract();
   const settings = useAppStore((s) => s.settings);
   const addRecentDir = useAppStore((s) => s.addRecentDir);
 
@@ -180,6 +188,17 @@ export default function App() {
     void run(file, dest, password, settings.overwrite);
   };
 
+  // 压缩入口回调：CompressPanel 触发。
+  const handleCreate = useCallback(
+    (
+      dest: string,
+      sources: { fs_path: string; archive_path: string }[],
+      password: string | null,
+      level: number | null
+    ) => void createArchive(dest, sources, password, level),
+    [createArchive]
+  );
+
   return (
     <div className="relative flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <Header onOpenSettings={() => setShowSettings(true)} />
@@ -246,6 +265,8 @@ export default function App() {
         )}
       </main>
       <TaskQueue />
+      {/* 压缩入口：浮于右下角，始终可用 */}
+      <CompressFab onCreate={handleCreate} />
       {hovering && (
         <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-indigo-500/10 backdrop-blur-[1px]">
           <div className="rounded-2xl border-2 border-dashed border-indigo-400 bg-white/80 px-10 py-8 text-center shadow-lg dark:bg-zinc-900/80">

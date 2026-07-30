@@ -3,6 +3,19 @@
     "title": "Extractr",
     "subtitle": "轻量解压工具"
   },
+  "compress": {
+    "title": "压缩",
+    "addFiles": "添加文件",
+    "addDirs": "添加文件夹",
+    "empty": "未选择任何文件或文件夹",
+    "format": "目标格式",
+    "destPlaceholder": "选择目标目录",
+    "level": "压缩级别",
+    "password": "密码",
+    "optional": "可选",
+    "passwordPlaceholder": "留空则不加密",
+    "create": "压缩"
+  },
   "info": {
     "supported": "支持格式",
     "extractDesc": "Extractr 支持解压以下压缩格式：",

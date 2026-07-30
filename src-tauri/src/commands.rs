@@ -179,7 +179,7 @@ pub struct CreateSourceDto {
     pub archive_path: String,
 }
 
-/// 创建归档（当前支持 .zip）。进度经 `on_progress` Channel 流式推送。
+/// 创建归档（支持 .zip/.7z/.tar.gz/.tar.xz/.tar）。进度经 `on_progress` Channel 流式推送。
 #[tauri::command]
 pub async fn create_archive(
     req: CreateRequest,

@@ -1,13 +1,14 @@
 import { useCallback } from "react";
 import {
   extractArchive,
+  createArchive,
   cancelExtraction,
   detectFormat,
   revealInDir,
   toArchiveError,
 } from "../lib/ipc";
 import { useAppStore } from "../store/useAppStore";
-import type { OverwritePolicy, ProgressEvent } from "../lib/types";
+import type { CreateSourceDto, OverwritePolicy, ProgressEvent } from "../lib/types";
 
 export function useExtract() {
   const addTask = useAppStore((s) => s.addTask);
@@ -160,5 +161,79 @@ export function useExtract() {
     void cancelExtraction(id);
   }, []);
 
-  return { run, cancel, retry };
+  /** 压缩：把一组磁盘文件/目录打包成归档。 */
+  const create = useCallback(
+    async (
+      dest: string,
+      sources: CreateSourceDto[],
+      password: string | null,
+      level: number | null
+    ) => {
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `c-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      addTask({
+        id,
+        source: dest,
+        dest,
+        format: dest.split(".").pop()?.toUpperCase() ?? "",
+        progress: 0,
+        indeterminate: false,
+        status: "running",
+        encrypted: password != null,
+        password,
+        overwrite: "skip",
+      });
+
+      const onProgress = (e: ProgressEvent) => {
+        switch (e.kind) {
+          case "entry_start":
+            updateTask(id, { currentFile: e.path });
+            break;
+          case "bytes":
+            updateTask(id, {
+              progress: e.indeterminate ? 0 : e.total ? e.processed / e.total : 0,
+              indeterminate: e.indeterminate || e.total === 0,
+              speed: e.speed,
+              eta_secs: e.eta_secs,
+            });
+            break;
+          case "finished":
+            updateTask(id, { progress: 1, indeterminate: false, summary: e.summary });
+            window.setTimeout(() => {
+              updateTask(id, { status: "done" });
+              if (autoOpenDir) {
+                void revealInDir(dest).catch(() => {});
+              }
+            }, 450);
+            break;
+          case "cancelled":
+            updateTask(id, { status: "cancelled" });
+            break;
+          case "error":
+            updateTask(id, {
+              status: "error",
+              error: e.error.message,
+              error_code: e.error.code,
+            });
+            break;
+        }
+      };
+
+      try {
+        await createArchive({ task_id: id, dest, sources, password, level }, onProgress);
+      } catch (err) {
+        const dto = toArchiveError(err);
+        updateTask(id, {
+          status: "error",
+          error: dto.message,
+          error_code: dto.code,
+        });
+      }
+    },
+    [addTask, updateTask, autoOpenDir]
+  );
+
+  return { run, cancel, retry, create };
 }

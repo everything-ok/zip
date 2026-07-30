@@ -46,6 +46,29 @@ export interface ExtractRequest {
   entries?: string[] | null;
 }
 
+/** 压缩创建请求。 */
+export interface CreateRequest {
+  task_id: string;
+  dest: string;
+  sources: CreateSourceDto[];
+  password: string | null;
+  level: number | null;
+}
+
+/** 压缩源条目：磁盘文件路径 + 归档内路径。 */
+export interface CreateSourceDto {
+  fs_path: string;
+  archive_path: string;
+}
+
+/** 压缩支持的格式。 */
+export type CreateFormat =
+  | "zip"
+  | "7z"
+  | "tar"
+  | "tar.gz"
+  | "tar.xz";
+
 export interface ListRequest {
   path: string;
   password: string | null;

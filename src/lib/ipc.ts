@@ -1,7 +1,8 @@
 import { invoke, Channel } from "@tauri-apps/api/core";
-import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
+import { revealItemInDir, openUrl } from "@tauri-apps/plugin-opener";
 import type {
   ArchiveErrorDto,
+  CreateRequest,
   EntryDto,
   ExtractRequest,
   ListRequest,
@@ -30,14 +31,24 @@ export async function cancelExtraction(taskId: string): Promise<void> {
   return invoke("cancel_extraction", { taskId });
 }
 
+/** 创建归档（压缩）。支持 zip/7z/tar.gz/tar.xz/tar。 */
+export async function createArchive(
+  req: CreateRequest,
+  onProgress: (e: ProgressEvent) => void
+): Promise<SummaryDto> {
+  const channel = new Channel<ProgressEvent>();
+  channel.onmessage = onProgress;
+  return invoke<SummaryDto>("create_archive", { req, onProgress: channel });
+}
+
 /** 在文件管理器中显示指定路径（所在目录并选中）。 */
 export async function revealInDir(path: string): Promise<void> {
   return revealItemInDir(path);
 }
 
-/** 用系统默认方式打开路径（目录或文件）。 */
-export async function openPathNative(path: string): Promise<void> {
-  return openPath(path);
+/** 用系统默认浏览器打开 URL。用于反馈/更新等外链。 */
+export async function openUrlNative(url: string): Promise<void> {
+  return openUrl(url);
 }
 
 /// 更新检查信息。

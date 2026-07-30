@@ -3,6 +3,19 @@
     "title": "Extractr",
     "subtitle": "Lightweight Extractor"
   },
+  "compress": {
+    "title": "Compress",
+    "addFiles": "Add files",
+    "addDirs": "Add folders",
+    "empty": "No files or folders selected",
+    "format": "Target format",
+    "destPlaceholder": "Choose destination folder",
+    "level": "Compression level",
+    "password": "Password",
+    "optional": "optional",
+    "passwordPlaceholder": "Leave empty for no encryption",
+    "create": "Compress"
+  },
   "info": {
     "supported": "Supported formats",
     "extractDesc": "Extractr can extract the following formats:",
