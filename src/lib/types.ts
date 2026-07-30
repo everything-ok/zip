@@ -80,7 +80,8 @@ export type OverwritePolicy = "skip" | "overwrite" | "rename" | "error";
 export type OpenArchiveAction =
   | { action: "open"; path: string }
   | { action: "extractHere"; path: string }
-  | { action: "extractToSubdir"; path: string };
+  | { action: "extractToSubdir"; path: string }
+  | { action: "compress"; path: string };
 
 export type ProgressEvent =
   | { kind: "started"; total_entries: number; total_bytes: number }

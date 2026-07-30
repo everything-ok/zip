@@ -614,6 +614,7 @@ pub async fn pop_pending_open() -> Result<Option<PendingOpenDto>, String> {
             crate::OpenAction::Open { path } => ("open", path),
             crate::OpenAction::ExtractHere { path } => ("extractHere", path),
             crate::OpenAction::ExtractToSubdir { path } => ("extractToSubdir", path),
+            crate::OpenAction::Compress { path } => ("compress", path),
         };
         PendingOpenDto {
             action: action_str.to_string(),
@@ -661,4 +662,107 @@ fn parse_options(req: &ExtractRequest) -> ExtractOptions {
         overwrite,
         ..Default::default()
     }
+}
+
+/// 反馈表单 DTO。
+#[derive(Deserialize)]
+pub struct FeedbackRequest {
+    pub email: String,
+    pub text: String,
+    pub images: Vec<String>,
+    pub video: Option<String>,
+}
+
+/// 发送反馈邮件到 2677989813@qq.com（经 QQ SMTP SSL）。
+#[tauri::command]
+pub async fn send_feedback(req: FeedbackRequest) -> Result<(), String> {
+    use lettre::message::header::ContentType;
+    use lettre::message::{Attachment, Mailbox, MultiPart, SinglePart};
+    use lettre::transport::smtp::client::Tls;
+    use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
+
+    const SMTP_HOST: &str = "smtp.qq.com";
+    const SMTP_PORT: u16 = 465;
+    const FROM_ADDR: &str = "2677989813@qq.com";
+    // QQ 邮箱授权码（用户提供）。运行时取值，避免 const 限制。
+    let smtp_auth = obfstr::obfstr!("afoooapkshwaecba").to_string();
+
+    let body = format!(
+        "反馈邮箱：{}\n\n问题描述：\n{}",
+        req.email, req.text
+    );
+
+    let from_mailbox: Mailbox = Mailbox::new(
+        Some("Extractr".into()),
+        FROM_ADDR
+            .parse()
+            .map_err(|e: lettre::address::AddressError| e.to_string())?,
+    );
+    let reply_mailbox: Mailbox = Mailbox::new(
+        None,
+        req.email
+            .parse()
+            .map_err(|e: lettre::address::AddressError| e.to_string())?,
+    );
+
+    let email = Message::builder()
+        .from(from_mailbox.clone())
+        .reply_to(reply_mailbox)
+        .to(from_mailbox)
+        .subject("Extractr 用户反馈")
+        .multipart({
+            let mut mp = MultiPart::mixed().singlepart(
+                SinglePart::builder()
+                    .header(ContentType::TEXT_PLAIN)
+                    .body(body),
+            );
+
+            for img_path in &req.images {
+                if let Ok(data) = std::fs::read(img_path) {
+                    let name = std::path::Path::new(img_path)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("image.png");
+                    let attachment = Attachment::new(name.to_string())
+                        .body(data, ContentType::parse("image/png").unwrap());
+                    mp = mp.singlepart(attachment);
+                }
+            }
+
+            if let Some(video_path) = &req.video {
+                if let Ok(meta) = std::fs::metadata(video_path) {
+                    if meta.len() <= 30 * 1024 * 1024 {
+                        if let Ok(data) = std::fs::read(video_path) {
+                            let attachment = Attachment::new("video.mp4".to_string())
+                                .body(data, ContentType::parse("video/mp4").unwrap());
+                            mp = mp.singlepart(attachment);
+                        }
+                    }
+                }
+            }
+            mp
+        })
+        .map_err(|e| e.to_string())?;
+
+    use lettre::transport::smtp::client::TlsParameters;
+
+    let tls = Tls::Wrapper(TlsParameters::new(SMTP_HOST.to_string()).map_err(|e| e.to_string())?);
+    let transport = AsyncSmtpTransport::<Tokio1Executor>::relay(SMTP_HOST)
+        .map_err(|e| e.to_string())?
+        .port(SMTP_PORT)
+        .tls(tls)
+        .credentials(lettre::transport::smtp::authentication::Credentials::new(
+            FROM_ADDR.to_string(),
+            smtp_auth,
+        ))
+        .build();
+
+    transport.send(email).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// 获取文件大小（供前端反馈表单校验视频体积）。失败返回 0。
+#[tauri::command]
+pub async fn file_size(path: String) -> Result<u64, String> {
+    Ok(std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0))
 }

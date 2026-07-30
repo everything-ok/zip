@@ -25,7 +25,20 @@
   },
   "feedback": {
     "title": "反馈问题",
-    "hint": "遇到问题或有建议？欢迎在 GitHub Issues 提交。"
+    "hint": "遇到问题或有建议？填写下方表单，我们将收到您的反馈。",
+    "email": "邮箱",
+    "description": "问题描述",
+    "descPlaceholder": "请详细描述您遇到的问题或建议（最多500字）",
+    "images": "图片",
+    "video": "视频",
+    "maxN": "最多{{n}}张",
+    "maxSize": "最大{{size}}",
+    "add": "添加",
+    "send": "发送",
+    "sending": "发送中…",
+    "sent": "反馈已发送，感谢您的支持！",
+    "textRequired": "请填写问题描述",
+    "videoTooLarge": "视频超过 {{max}} 限制"
   },
   "about": {
     "title": "关于",

@@ -35,7 +35,7 @@ import type {
   EntryDto,
   OpenArchiveAction,
 } from "./lib/types";
-import { CompressFab } from "./components/CompressFab";
+import { CompressPanel } from "./components/CompressPanel";
 
 const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
 
@@ -57,6 +57,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<ArchiveErrorDto | null>(null);
+  // 压缩面板状态提到 App 层：右键压缩 argv 可预填源；解压页不再有浮动按钮。
+  const [compressOpen, setCompressOpen] = useState(false);
+  const [compressSource, setCompressSource] = useState<string | undefined>();
   // 首次启动引导：提示用户设 Extractr 为默认程序（仅显示一次）。
   const [showDefaultGuide, setShowDefaultGuide] = useState(
     () => !localStorage.getItem(DEFAULT_GUIDE_KEY)
@@ -148,6 +151,10 @@ export default function App() {
             ? dir || "."
             : `${dir}/${basename(path).replace(/\.[^.]+$/, "")}`;
         void runRef.current(path, target, null, settings.overwrite);
+      } else if (action === "compress") {
+        // 文件夹右键"用 Extractr 压缩"：打开压缩面板预填该文件夹。
+        setCompressSource(path);
+        setCompressOpen(true);
       }
     },
     [settings.overwrite]
@@ -201,7 +208,13 @@ export default function App() {
 
   return (
     <div className="relative flex h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <Header onOpenSettings={() => setShowSettings(true)} />
+      <Header
+        onOpenSettings={() => setShowSettings(true)}
+        onCompress={() => {
+          setCompressSource(undefined);
+          setCompressOpen(true);
+        }}
+      />
       {showDefaultGuide && !file && (
         <div className="flex items-center gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-2 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
           <ExternalLink size={15} className="shrink-0" />
@@ -265,8 +278,16 @@ export default function App() {
         )}
       </main>
       <TaskQueue />
-      {/* 压缩入口：浮于右下角，始终可用 */}
-      <CompressFab onCreate={handleCreate} />
+      {/* 压缩面板：右键文件夹"用 Extractr 压缩"或 Header 入口触发。解压页无浮动按钮。 */}
+      {compressOpen && (
+        <CompressPanel
+          onClose={() => {
+            setCompressOpen(false);
+            setCompressSource(undefined);
+          }}
+          initialSource={compressSource}
+        />
+      )}
       {hovering && (
         <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-indigo-500/10 backdrop-blur-[1px]">
           <div className="rounded-2xl border-2 border-dashed border-indigo-400 bg-white/80 px-10 py-8 text-center shadow-lg dark:bg-zinc-900/80">

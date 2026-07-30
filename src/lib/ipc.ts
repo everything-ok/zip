@@ -59,7 +59,7 @@ export interface UpdateInfo {
 
 /// 后端缓存的首启动作（文件关联/右键启动时前端 ready 前可能丢 emit）。
 export interface PendingOpenDto {
-  action: "open" | "extractHere" | "extractToSubdir";
+  action: "open" | "extractHere" | "extractToSubdir" | "compress";
   path: string;
 }
 

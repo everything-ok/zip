@@ -5,18 +5,28 @@ import {
   Info,
   Download,
   MessageSquare,
+  PackagePlus,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal } from "./ui";
+import { FeedbackModal } from "./FeedbackModal";
+import logoUrl from "../assets/logo.svg";
 import { openUrlNative, checkUpdate, type UpdateInfo } from "../lib/ipc";
 
-const APP_VERSION = "0.2.3";
+const APP_VERSION = "0.2.4";
 const ISSUES_URL = "https://github.com/everything-ok/zip/issues";
 
-export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function Header({
+  onOpenSettings,
+  onCompress,
+}: {
+  onOpenSettings: () => void;
+  onCompress: () => void;
+}) {
   const { t } = useTranslation();
   const [aboutOpen, setAboutOpen] = useState(false);
   const [formatsOpen, setFormatsOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
 
   // 启动后异步检查更新（失败静默，不打扰用户）。
@@ -34,9 +44,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
     <>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-zinc-200 px-5 dark:border-zinc-800">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
-            <Archive size={18} />
-          </div>
+          <img src={logoUrl} alt="Extractr" className="h-8 w-8 rounded-lg shadow-sm" />
           <div className="leading-tight">
             <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {t("app.title")}
@@ -56,7 +64,16 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           )}
           <Button
             variant="ghost"
-            onClick={() => void openUrlNative(ISSUES_URL).catch(() => {})}
+            onClick={onCompress}
+            aria-label={t("compress.title")}
+            title={t("compress.title")}
+            className="px-2.5"
+          >
+            <PackagePlus size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setFeedbackOpen(true)}
             aria-label={t("feedback.title")}
             title={t("feedback.title")}
             className="px-2.5"
@@ -150,9 +167,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
       <Modal open={aboutOpen} onClose={() => setAboutOpen(false)} title={t("about.title")}>
         <div className="flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-300">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white">
-              <Archive size={20} />
-            </div>
+            <img src={logoUrl} alt="Extractr" className="h-10 w-10 rounded-lg shadow-sm" />
             <div>
               <div className="font-semibold text-zinc-900 dark:text-zinc-100">
                 {t("app.title")} v{APP_VERSION}
@@ -162,7 +177,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           </div>
           <p className="leading-relaxed">{t("about.desc")}</p>
           <button
-            onClick={() => void openUrlNative(ISSUES_URL).catch(() => {})}
+            onClick={() => setFeedbackOpen(true)}
             className="flex items-center gap-1.5 rounded-lg bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
           >
             <MessageSquare size={14} />
@@ -176,6 +191,7 @@ export function Header({ onOpenSettings }: { onOpenSettings: () => void }) {
           </ul>
         </div>
       </Modal>
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </>
   );
 }

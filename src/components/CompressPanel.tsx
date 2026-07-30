@@ -14,11 +14,26 @@ interface Source {
   archive_path: string;
 }
 
-export function CompressPanel({ onClose }: { onClose: () => void }) {
+export function CompressPanel({
+  onClose,
+  initialSource,
+}: {
+  onClose: () => void;
+  initialSource?: string;
+}) {
   const { t } = useTranslation();
   const { create } = useExtract();
-  const [sources, setSources] = useState<Source[]>([]);
-  const [dest, setDest] = useState("");
+  const [sources, setSources] = useState<Source[]>(() =>
+    initialSource
+      ? [{ fs_path: initialSource, archive_path: basename(initialSource) }]
+      : []
+  );
+  // 预填目标目录为源所在目录。
+  const [dest, setDest] = useState(() =>
+    initialSource
+      ? initialSource.replace(/\\/g, "/").split("/").slice(0, -1).join("/")
+      : ""
+  );
   const [format, setFormat] = useState<Format>("zip");
   const [password, setPassword] = useState("");
   const [level, setLevel] = useState(6);

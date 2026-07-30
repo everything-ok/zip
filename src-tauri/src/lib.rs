@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 /// 从 argv 解析右键菜单动作与归档路径。
-/// 支持 `--extract-here <path>` / `--extract-to-subdir <path>` / 裸路径（打开预览）。
+/// 支持 `--extract-here <path>` / `--extract-to-subdir <path>` / `--compress <path>` / 裸路径（打开预览）。
 fn parse_open_action(args: &[String]) -> Option<OpenAction> {
     let mut iter = args.iter().skip(1);
     let archive_exts = [
@@ -43,6 +43,12 @@ fn parse_open_action(args: &[String]) -> Option<OpenAction> {
                     return Some(OpenAction::ExtractToSubdir { path: path.clone() });
                 }
             }
+            "--compress" => {
+                // 压缩目标通常是目录，不走 archive_exts 校验。
+                if let Some(path) = iter.next() {
+                    return Some(OpenAction::Compress { path: path.clone() });
+                }
+            }
             _ => {
                 let lower = arg.to_ascii_lowercase();
                 if archive_exts.iter().any(|ext| lower.ends_with(ext))
@@ -62,6 +68,7 @@ enum OpenAction {
     Open { path: String },
     ExtractHere { path: String },
     ExtractToSubdir { path: String },
+    Compress { path: String },
 }
 
 /// 缓存首启动作：文件关联/右键启动时 webview 可能尚未加载完成，
@@ -84,6 +91,8 @@ pub fn run() {
             commands::test_archive,
             commands::check_update,
             commands::pop_pending_open,
+            commands::send_feedback,
+            commands::file_size,
         ]);
 
     // 处理文件关联/右键菜单启动参数：解析动作后缓存到 PENDING_OPEN，

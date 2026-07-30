@@ -1,0 +1,28 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="box" x1="48" y1="88" x2="208" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E0E7FF"/>
+    </linearGradient>
+  </defs>
+  <!-- 圆角背景 -->
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <!-- 归档箱主体 -->
+  <path d="M48 104 L128 72 L208 104 L208 200 C208 204.418 204.418 208 200 208 L56 208 C51.582 208 48 204.418 48 200 Z" fill="url(#box)"/>
+  <!-- 箱盖 -->
+  <path d="M40 96 L128 64 L216 96 L216 112 C216 114.209 214.209 116 212 116 L44 116 C41.791 116 40 114.209 40 112 Z" fill="#C7D2FE"/>
+  <!-- 拉链头/锁扣（顶部中央） -->
+  <rect x="116" y="44" width="24" height="24" rx="4" fill="#FFFFFF"/>
+  <rect x="120" y="50" width="16" height="4" rx="2" fill="#4F46E5"/>
+  <!-- 拉链齿（竖向） -->
+  <rect x="126" y="68" width="4" height="28" rx="2" fill="#A5B4FC"/>
+  <!-- 箱前标签条 -->
+  <rect x="96" y="148" width="64" height="12" rx="6" fill="#6366F1"/>
+  <rect x="108" y="168" width="40" height="8" rx="4" fill="#A5B4FC"/>
+  <!-- 解压箭头（向上的开口，象征解压） -->
+  <path d="M128 120 L128 140 M120 128 L128 120 L136 128" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

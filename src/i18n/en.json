@@ -25,7 +25,20 @@
   },
   "feedback": {
     "title": "Feedback",
-    "hint": "Found a bug or have a suggestion? Open an issue on GitHub."
+    "hint": "Found a bug or have a suggestion? Fill in the form below.",
+    "email": "Email",
+    "description": "Description",
+    "descPlaceholder": "Describe the issue or suggestion (max 500 chars)",
+    "images": "Images",
+    "video": "Video",
+    "maxN": "up to {{n}}",
+    "maxSize": "max {{size}}",
+    "add": "Add",
+    "send": "Send",
+    "sending": "Sending…",
+    "sent": "Feedback sent. Thank you!",
+    "textRequired": "Please describe the issue",
+    "videoTooLarge": "Video exceeds {{max}} limit"
   },
   "about": {
     "title": "About",
