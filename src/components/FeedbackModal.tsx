@@ -76,10 +76,12 @@ export function FeedbackModal({
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("send_feedback", {
-        email,
-        text,
-        images: images.map((i) => i.path),
-        video: video?.path ?? null,
+        req: {
+          email,
+          text,
+          images: images.map((i) => i.path),
+          video: video?.path ?? null,
+        },
       });
       setResult("ok");
       setText("");
@@ -113,16 +115,15 @@ export function FeedbackModal({
             <div className="rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300">
               {t("feedback.hint")}
             </div>
-            {/* 邮箱 */}
+            {/* 邮箱（固定不可修改） */}
             <div className="flex flex-col gap-1">
               <label className="flex items-center gap-1 text-xs font-medium text-zinc-500">
                 <Mail size={13} /> {t("feedback.email")}
               </label>
               <input
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={DEFAULT_EMAIL}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                readOnly
+                className="cursor-not-allowed rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400"
               />
             </div>
             {/* 描述 */}
