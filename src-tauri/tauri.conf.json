@@ -35,15 +35,15 @@
       "icons/icon.ico"
     ],
     "fileAssociations": [
-      { "ext": ["zip"], "name": "ZIP Archive", "description": "ZIP 压缩包" },
-      { "ext": ["7z"], "name": "7z Archive", "description": "7z 压缩包" },
-      { "ext": ["rar"], "name": "RAR Archive", "description": "RAR 压缩包" },
-      { "ext": ["tar"], "name": "TAR Archive", "description": "TAR 归档" },
-      { "ext": ["gz", "gzip"], "name": "GZIP Archive", "description": "GZIP 压缩" },
-      { "ext": ["bz2"], "name": "BZIP2 Archive", "description": "BZIP2 压缩" },
-      { "ext": ["xz"], "name": "XZ Archive", "description": "XZ 压缩" },
-      { "ext": ["zst", "zstd"], "name": "Zstandard Archive", "description": "Zstandard 压缩" },
-      { "ext": ["tgz", "tbz2", "txz", "tzst"], "name": "Compressed TAR", "description": "压缩 TAR 归档" }
+      { "ext": ["zip"], "name": "ZIP Archive", "description": "ZIP Archive" },
+      { "ext": ["7z"], "name": "7z Archive", "description": "7z Archive" },
+      { "ext": ["rar"], "name": "RAR Archive", "description": "RAR Archive" },
+      { "ext": ["tar"], "name": "TAR Archive", "description": "TAR Archive" },
+      { "ext": ["gz", "gzip"], "name": "GZIP Archive", "description": "GZIP Archive" },
+      { "ext": ["bz2"], "name": "BZIP2 Archive", "description": "BZIP2 Archive" },
+      { "ext": ["xz"], "name": "XZ Archive", "description": "XZ Archive" },
+      { "ext": ["zst", "zstd"], "name": "Zstandard Archive", "description": "Zstandard Archive" },
+      { "ext": ["tgz", "tbz2", "txz", "tzst"], "name": "Compressed TAR", "description": "Compressed TAR Archive" }
     ],
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },
