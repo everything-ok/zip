@@ -5,10 +5,16 @@
 
 ; ===== 顶层宏：单扩展名右键"用 Extractr 打开" =====
 !macro EXTR_REG_EXT EXT
+  ; 右键菜单
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "" "用 Extractr 打开"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "Position" "Top"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen" "Icon" "$INSTDIR\Extractr.exe"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen\command" "" '"$INSTDIR\Extractr.exe" "%1"'
+  ; ProgID + DefaultIcon：让资源管理器在压缩包文件上显示 Extractr 图标
+  WriteRegStr HKCU "Software\Classes\Extractr${EXT}" "" "Extractr Archive"
+  WriteRegStr HKCU "Software\Classes\Extractr${EXT}\DefaultIcon" "" "$INSTDIR\Extractr.exe,0"
+  WriteRegStr HKCU "Software\Classes\Extractr${EXT}\shell\open\command" "" '"$INSTDIR\Extractr.exe" "%1"'
+  WriteRegStr HKCU "Software\Classes\${EXT}\OpenWithProgids" "Extractr${EXT}" ""
 !macroend
 
 !macro EXTR_UNREG_EXT EXT
@@ -16,6 +22,9 @@
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrHere"
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrSubdir"
   DeleteRegKey HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrOpen"
+  ; 清理 ProgID + OpenWithProgids
+  DeleteRegKey HKCU "Software\Classes\Extractr${EXT}"
+  DeleteRegValue HKCU "Software\Classes\${EXT}\OpenWithProgids" "Extractr${EXT}"
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
