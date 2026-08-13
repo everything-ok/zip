@@ -9,8 +9,8 @@
 
 ; ===== 顶层宏：单压缩包扩展名右键"用 Extractr 解压" =====
 !macro EXTR_REG_EXT EXT
-  ; 右键菜单：解压（覆盖 * 通配的"压缩"）
-  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrAction" "" "用 Extractr 解压"
+  ; 右键菜单：用 Extractr 打开（覆盖 * 通配的"压缩"）
+  WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrAction" "" "用 Extractr 打开"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrAction" "Position" "Top"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrAction" "Icon" "$INSTDIR\Extractr.exe"
   WriteRegStr HKCU "Software\Classes\SystemFileAssociations\${EXT}\shell\ExtractrAction\command" "" '"$INSTDIR\Extractr.exe" "%1"'
