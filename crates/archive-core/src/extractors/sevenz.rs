@@ -6,8 +6,13 @@ use std::path::Path;
 use crate::error::ArchiveError;
 use crate::extractors::copy_stream;
 use crate::safety::{ensure_safe_directory, prepare_output, sanitize_entry_path};
+use crate::split_reader::SplitReader;
 use crate::traits::{ArchiveExtractor, CancelToken, ExtractContext, ProgressSink};
 use crate::types::{ArchiveEntry, ArchiveFormat, ExtractSummary, OverwritePolicy};
+
+/// 组合 trait：Read + Seek，用于 trait object。
+trait ReadSeek: std::io::Read + std::io::Seek {}
+impl<T: std::io::Read + std::io::Seek> ReadSeek for T {}
 
 pub struct SevenZExtractor;
 
@@ -21,13 +26,13 @@ impl ArchiveExtractor for SevenZExtractor {
     }
 
     fn list(&self, path: &Path, password: Option<&str>) -> anyhow::Result<Vec<ArchiveEntry>> {
-        let mut file = std::fs::File::open(path)?;
+        let mut reader = self.open_reader(path)?;
         let sevenz_password = match password {
             Some(value) => sevenz_rust2::Password::from(value),
             None => sevenz_rust2::Password::empty(),
         };
         let archive =
-            sevenz_rust2::Archive::read(&mut file, &sevenz_password).map_err(|error| {
+            sevenz_rust2::Archive::read(&mut reader, &sevenz_password).map_err(|error| {
                 if looks_like_password_error(&error.to_string()) {
                     ArchiveError::PasswordRequired
                 } else {
@@ -96,19 +101,19 @@ impl ArchiveExtractor for SevenZExtractor {
             limits: &ctx.options.limits,
             filter: &std::collections::HashSet::new(),
         };
-        let file = std::fs::File::open(ctx.source)?;
+        let reader = self.open_reader(ctx.source)?;
         let encrypted = ctx.options.password.is_some();
         let result = match ctx.options.password.as_deref() {
             Some(password) => {
                 let sevenz_password = sevenz_rust2::Password::from(password);
                 sevenz_rust2::decompress_with_extract_fn_and_password(
-                    file,
+                    reader,
                     std::path::Path::new(""),
                     sevenz_password,
                     |entry, reader, _path| sz_test_callback(entry, reader, &mut state, encrypted),
                 )
             }
-            None => sevenz_rust2::decompress_with_extract_fn(file, std::path::Path::new(""), |entry, reader, _path| {
+            None => sevenz_rust2::decompress_with_extract_fn(reader, std::path::Path::new(""), |entry, reader, _path| {
                 sz_test_callback(entry, reader, &mut state, encrypted)
             }),
         };
@@ -181,6 +186,27 @@ fn sz_test_callback(
 }
 
 impl SevenZExtractor {
+    /// 打开 7z 文件读取器。若检测到分卷（.7z.001），用 SplitReader 串联；否则普通 File。
+    fn open_reader(&self, path: &Path) -> anyhow::Result<Box<dyn ReadSeek>> {
+        let lower = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        // 检测 .7z.001 分卷
+        if lower.contains(".7z.") {
+            if let Some(idx) = lower.find(".7z.") {
+                let after = &lower[idx + 4..];
+                if after.chars().all(|c| c.is_ascii_digit()) && !after.is_empty() {
+                    if let Ok(sr) = SplitReader::from_first_volume(path) {
+                        return Ok(Box::new(sr));
+                    }
+                }
+            }
+        }
+        Ok(Box::new(std::fs::File::open(path)?))
+    }
+
     fn extract_filtered(
         &self,
         ctx: &ExtractContext,
@@ -190,12 +216,12 @@ impl SevenZExtractor {
 
         // 7z 头部含每个条目的未压缩大小，先读取计算任务总量，用于整体进度。
         let total_bytes = {
-            let mut header_file = std::fs::File::open(ctx.source)?;
+            let mut header_reader = self.open_reader(ctx.source)?;
             let sevenz_password = match ctx.options.password.as_deref() {
                 Some(value) => sevenz_rust2::Password::from(value),
                 None => sevenz_rust2::Password::empty(),
             };
-            match sevenz_rust2::Archive::read(&mut header_file, &sevenz_password) {
+            match sevenz_rust2::Archive::read(&mut header_reader, &sevenz_password) {
                 Ok(archive) => archive
                     .files
                     .iter()
@@ -222,20 +248,20 @@ impl SevenZExtractor {
             limits: &ctx.options.limits,
             filter,
         };
-        let file = std::fs::File::open(ctx.source)?;
+        let reader = self.open_reader(ctx.source)?;
         let encrypted = ctx.options.password.is_some();
         let result = match ctx.options.password.as_deref() {
             Some(password) => {
                 let sevenz_password = sevenz_rust2::Password::from(password);
                 sevenz_rust2::decompress_with_extract_fn_and_password(
-                    file,
+                    reader,
                     ctx.dest,
                     sevenz_password,
                     |entry, reader, _path| sz_callback(entry, reader, &mut state, encrypted),
                 )
             }
             None => {
-                sevenz_rust2::decompress_with_extract_fn(file, ctx.dest, |entry, reader, _path| {
+                sevenz_rust2::decompress_with_extract_fn(reader, ctx.dest, |entry, reader, _path| {
                     sz_callback(entry, reader, &mut state, encrypted)
                 })
             }

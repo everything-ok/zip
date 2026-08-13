@@ -16,6 +16,16 @@
     "passwordPlaceholder": "Leave empty for no encryption",
     "create": "Compress"
   },
+  "convert": {
+    "title": "Convert",
+    "targetFormat": "Target format",
+    "sourcePassword": "Source password",
+    "destPassword": "Target password",
+    "convert": "Convert"
+  },
+  "test": {
+    "title": "Test integrity"
+  },
   "info": {
     "supported": "Supported formats",
     "extractDesc": "Extractr can extract the following formats:",
@@ -27,6 +37,7 @@
     "title": "Feedback",
     "hint": "Found a bug or have a suggestion? Fill in the form below.",
     "email": "Email",
+    "contact": "Contact",
     "description": "Description",
     "descPlaceholder": "Describe the issue or suggestion (max 500 chars)",
     "images": "Images",
@@ -135,6 +146,7 @@
     "duplicateTask": "Task ID already exists",
     "conflict": "Target file already exists",
     "cancelled": "Operation cancelled",
+    "missingVolume": "Missing volume file; ensure all parts are in the same folder",
     "io": "Read/write error"
   },
   "settings": {
@@ -149,6 +161,8 @@
     "ow_overwrite": "Overwrite",
     "ow_rename": "Rename",
     "ow_error": "Error",
-    "autoOpen": "Auto-open folder after extraction"
+    "autoOpen": "Auto-open folder after extraction",
+    "deleteAfterExtract": "Delete source after extraction",
+    "deleteAfterCompress": "Delete source after compression"
   }
 }

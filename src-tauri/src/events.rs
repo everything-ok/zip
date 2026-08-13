@@ -135,4 +135,7 @@ pub struct SummaryDto {
     pub entries_skipped: usize,
     pub bytes_written: u64,
     pub cancelled: bool,
+    /// 已提交到 dest 的相对路径，取消时用于清理残留。
+    #[serde(default)]
+    pub extracted_paths: Vec<String>,
 }

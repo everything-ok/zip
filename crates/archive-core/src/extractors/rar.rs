@@ -32,9 +32,10 @@ impl ArchiveExtractor for RarExtractor {
     }
 
     fn list(&self, path: &Path, password: Option<&str>) -> anyhow::Result<Vec<ArchiveEntry>> {
+        let resolved = self.resolve_first_volume(path);
         let archive = match password {
-            Some(value) => unrar::Archive::with_password(path, value),
-            None => unrar::Archive::new(path),
+            Some(value) => unrar::Archive::with_password(&resolved, value),
+            None => unrar::Archive::new(&resolved),
         };
         let mut entries = Vec::new();
         for entry in archive.open_for_listing()? {
@@ -57,9 +58,10 @@ impl ArchiveExtractor for RarExtractor {
 
     fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
         // RAR 测试：用 unrar 的 test 模式，CRC 校验不写盘。
+        let resolved = self.resolve_first_volume(ctx.source);
         let archive = match &ctx.options.password {
-            Some(value) => unrar::Archive::with_password(ctx.source, value),
-            None => unrar::Archive::new(ctx.source),
+            Some(value) => unrar::Archive::with_password(&resolved, value),
+            None => unrar::Archive::new(&resolved),
         };
         // 预扫描条目数用于进度与上限校验。
         let count = self.preflight(ctx)?.count;
@@ -121,9 +123,10 @@ impl ArchiveExtractor for RarExtractor {
         let isolation = unique_isolation_dir(ctx.dest)?;
         let isolation_guard = IsolationGuard::new(isolation.clone());
 
+        let resolved = self.resolve_first_volume(ctx.source);
         let archive = match &ctx.options.password {
-            Some(value) => unrar::Archive::with_password(ctx.source, value),
-            None => unrar::Archive::new(ctx.source),
+            Some(value) => unrar::Archive::with_password(&resolved, value),
+            None => unrar::Archive::new(&resolved),
         };
 
         let mut summary = ExtractSummary {
@@ -183,10 +186,23 @@ impl ArchiveExtractor for RarExtractor {
 }
 
 impl RarExtractor {
+    /// 若传入路径是 RAR 分卷的非首卷，用 unrar 的 first_part() 重定向到首卷。
+    /// 若非分卷或已是首卷，原样返回。
+    fn resolve_first_volume(&self, path: &Path) -> PathBuf {
+        let archive = unrar::Archive::new(path);
+        if archive.is_multipart() {
+            let first = archive.first_part();
+            first.into()
+        } else {
+            path.to_path_buf()
+        }
+    }
+
     fn preflight(&self, ctx: &ExtractContext) -> anyhow::Result<Preflight> {
+        let resolved = self.resolve_first_volume(ctx.source);
         let archive = match &ctx.options.password {
-            Some(value) => unrar::Archive::with_password(ctx.source, value),
-            None => unrar::Archive::new(ctx.source),
+            Some(value) => unrar::Archive::with_password(&resolved, value),
+            None => unrar::Archive::new(&resolved),
         };
         let mut entries = Vec::new();
         for header in archive.open_for_listing()? {

@@ -30,6 +30,8 @@ export interface Settings {
   language: "zh" | "en";
   overwrite: OverwritePolicy;
   autoOpenDir: boolean;
+  deleteAfterExtract: boolean;
+  deleteAfterCompress: boolean;
   recentDirs: string[];
 }
 
@@ -55,6 +57,8 @@ export const useAppStore = create<AppState>()(
         language: "zh",
         overwrite: "skip",
         autoOpenDir: false,
+        deleteAfterExtract: false,
+        deleteAfterCompress: false,
         recentDirs: [],
       },
       addTask: (t) => set((s) => ({ tasks: [t, ...s.tasks] })),

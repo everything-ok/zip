@@ -1,0 +1,17 @@
+[package]
+name = "archive-core-napi"
+version = "0.1.0"
+edition = "2021"
+description = "archive-core NAPI 导出层（HarmonyOS .so）"
+
+[lib]
+name = "archive_core_napi"
+crate-type = ["cdylib"]
+
+[dependencies]
+archive-core = { path = "../../../crates/archive-core", features = ["rar"] }
+napi = { version = "2", features = ["async"] }
+napi-derive = "2"
+
+[build-dependencies]
+napi-build = "2"

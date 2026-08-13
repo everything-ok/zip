@@ -16,6 +16,16 @@
     "passwordPlaceholder": "留空则不加密",
     "create": "压缩"
   },
+  "convert": {
+    "title": "格式转换",
+    "targetFormat": "目标格式",
+    "sourcePassword": "源文件密码",
+    "destPassword": "目标文件密码",
+    "convert": "转换"
+  },
+  "test": {
+    "title": "测试完整性"
+  },
   "info": {
     "supported": "支持格式",
     "extractDesc": "Extractr 支持解压以下压缩格式：",
@@ -27,6 +37,7 @@
     "title": "反馈问题",
     "hint": "遇到问题或有建议？填写下方表单，我们将收到您的反馈。",
     "email": "邮箱",
+    "contact": "联系方式",
     "description": "问题描述",
     "descPlaceholder": "请详细描述您遇到的问题或建议（最多500字）",
     "images": "图片",
@@ -135,6 +146,7 @@
     "duplicateTask": "任务 ID 已存在",
     "conflict": "目标文件已存在",
     "cancelled": "操作已取消",
+    "missingVolume": "缺少分卷文件，请确保所有分卷在同一目录",
     "io": "读写错误"
   },
   "settings": {
@@ -149,6 +161,8 @@
     "ow_overwrite": "覆盖",
     "ow_rename": "重命名",
     "ow_error": "报错",
-    "autoOpen": "解压后自动打开目录"
+    "autoOpen": "解压后自动打开目录",
+    "deleteAfterExtract": "解压后删除原文件",
+    "deleteAfterCompress": "压缩后删除原文件"
   }
 }

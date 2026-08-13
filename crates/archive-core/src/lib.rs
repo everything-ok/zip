@@ -13,6 +13,7 @@ pub mod error;
 pub mod extractors;
 pub mod progress;
 pub mod safety;
+pub mod split_reader;
 pub mod traits;
 pub mod types;
 

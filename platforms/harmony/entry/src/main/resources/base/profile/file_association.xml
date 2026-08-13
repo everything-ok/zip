@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fileAssociations>
+  <association
+    mimeType="application/zip"
+    name="ZIP Archive"
+    suffixes="zip"
+  />
+  <association
+    mimeType="application/x-7z-compressed"
+    name="7z Archive"
+    suffixes="7z"
+  />
+  <association
+    mimeType="application/x-rar-compressed"
+    name="RAR Archive"
+    suffixes="rar"
+  />
+  <association
+    mimeType="application/gzip"
+    name="GZIP Archive"
+    suffixes="gz gzip tgz"
+  />
+  <association
+    mimeType="application/x-tar"
+    name="TAR Archive"
+    suffixes="tar"
+  />
+  <association
+    mimeType="application/x-xz"
+    name="XZ Archive"
+    suffixes="xz txz"
+  />
+  <association
+    mimeType="application/x-bzip2"
+    name="BZIP2 Archive"
+    suffixes="bz2 tbz2"
+  />
+  <association
+    mimeType="application/zstd"
+    name="Zstandard Archive"
+    suffixes="zst tzst"
+  />
+</fileAssociations>

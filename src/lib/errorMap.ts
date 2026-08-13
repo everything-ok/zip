@@ -38,6 +38,8 @@ export function describeError(
       return t("err.conflict");
     case "cancelled":
       return t("err.cancelled");
+    case "missing_volume":
+      return t("err.missingVolume");
     case "io":
       return t("err.io");
     default:

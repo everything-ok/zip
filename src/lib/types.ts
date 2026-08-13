@@ -14,6 +14,7 @@ export interface SummaryDto {
   entries_skipped: number;
   bytes_written: number;
   cancelled: boolean;
+  extracted_paths?: string[];
 }
 
 /// 与后端 `ArchiveErrorDto` 对齐的结构化错误。
@@ -32,6 +33,7 @@ export interface ArchiveErrorDto {
     | "too_many_tasks"
     | "conflict"
     | "cancelled"
+    | "missing_volume"
     | "io"
     | "duplicate_task";
   message: string;
@@ -59,6 +61,22 @@ export interface CreateRequest {
 export interface CreateSourceDto {
   fs_path: string;
   archive_path: string;
+}
+
+/** 格式转换请求。 */
+export interface ConvertRequest {
+  task_id: string;
+  source: string;
+  dest: string;
+  password: string | null;
+  dest_password: string | null;
+  level: number | null;
+}
+
+/** 测试归档完整性请求。 */
+export interface TestRequest {
+  source: string;
+  password: string | null;
 }
 
 /** 压缩支持的格式。 */

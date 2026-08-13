@@ -166,4 +166,7 @@ pub struct ExtractSummary {
     pub entries_skipped: usize,
     pub bytes_written: u64,
     pub cancelled: bool,
+    /// 已成功提交到 dest 的文件路径（相对 dest），取消时用于清理残留。
+    #[serde(default)]
+    pub extracted_paths: Vec<String>,
 }

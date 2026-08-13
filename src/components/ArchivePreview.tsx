@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { File, Folder, Lock, Search, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { File, Folder, Lock, Search, ChevronDown, ChevronRight, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { EntryDto } from "../lib/types";
 import { formatBytes, basename, compressionRatio, formatTime } from "../lib/format";
-import { Badge } from "./ui";
+import { Badge, Button } from "./ui";
 
 const PREVIEW_LIMIT = 500;
 
@@ -42,11 +42,15 @@ export function ArchivePreview({
   format,
   entries,
   loading = false,
+  onConvert,
+  onTest,
 }: {
   path: string;
   format?: string;
   entries: EntryDto[];
   loading?: boolean;
+  onConvert?: () => void;
+  onTest?: () => void;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -155,7 +159,17 @@ export function ArchivePreview({
             {t("preview.encrypted")}
           </Badge>
         )}
-        <span className="ml-auto text-xs text-zinc-500">
+        <span className="ml-auto flex items-center gap-1 text-xs text-zinc-500">
+          {onConvert && (
+            <Button variant="ghost" onClick={onConvert} className="px-2 py-0.5 text-xs" title={t("convert.title")}>
+              <ArrowRight size={13} /> {t("convert.title")}
+            </Button>
+          )}
+          {onTest && (
+            <Button variant="ghost" onClick={onTest} className="px-2 py-0.5 text-xs" title={t("test.title")}>
+              <ShieldCheck size={13} /> {t("test.title")}
+            </Button>
+          )}
           {t("preview.items", { count: entries.length })}
         </span>
       </div>

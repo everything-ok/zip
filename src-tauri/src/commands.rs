@@ -97,6 +97,7 @@ pub async fn extract_archive(
 
     let source = PathBuf::from(&req.source);
     let dest = PathBuf::from(&req.dest);
+    let dest_for_cleanup = dest.clone();
     let options = parse_options(&req);
     let progress = ChannelSink::new(on_progress.clone());
     let cancel_tok = ArcCancel(cancel.clone());
@@ -134,6 +135,8 @@ pub async fn extract_archive(
 
     match extract_result {
         Ok(summary) if summary.cancelled => {
+            // 取消时清理 dest 中已提交的残留文件。
+            cleanup_extracted(&dest_for_cleanup, &summary.extracted_paths);
             let _ = on_progress.send(ProgressEvent::Cancelled);
             Err(ArchiveErrorDto::new("cancelled", "操作已取消"))
         }
@@ -143,6 +146,7 @@ pub async fn extract_archive(
                 entries_skipped: summary.entries_skipped,
                 bytes_written: summary.bytes_written,
                 cancelled: summary.cancelled,
+                extracted_paths: summary.extracted_paths,
             };
             let _ = on_progress.send(ProgressEvent::Finished {
                 summary: dto.clone(),
@@ -213,6 +217,7 @@ pub async fn create_archive(
     }
 
     let dest = PathBuf::from(&req.dest);
+    let dest_for_cleanup = dest.clone();
     let sources: Vec<CreateSource> = req
         .sources
         .into_iter()
@@ -256,6 +261,8 @@ pub async fn create_archive(
 
     match create_result {
         Ok(summary) if summary.cancelled => {
+            // 取消时清理 dest 中已提交的残留文件。
+            cleanup_extracted(&dest_for_cleanup, &summary.extracted_paths);
             let _ = on_progress.send(ProgressEvent::Cancelled);
             Err(ArchiveErrorDto::new("cancelled", "操作已取消"))
         }
@@ -265,6 +272,7 @@ pub async fn create_archive(
                 entries_skipped: summary.entries_skipped,
                 bytes_written: summary.bytes_written,
                 cancelled: summary.cancelled,
+                extracted_paths: summary.extracted_paths,
             };
             let _ = on_progress.send(ProgressEvent::Finished {
                 summary: dto.clone(),
@@ -355,6 +363,7 @@ pub async fn convert_archive(
                 entries_skipped: summary.entries_skipped,
                 bytes_written: summary.bytes_written,
                 cancelled: summary.cancelled,
+                extracted_paths: summary.extracted_paths,
             };
             let _ = on_progress.send(ProgressEvent::Finished { summary: dto.clone() });
             Ok(dto)
@@ -526,6 +535,7 @@ pub async fn test_archive(
                 entries_skipped: summary.entries_skipped,
                 bytes_written: summary.bytes_written,
                 cancelled: summary.cancelled,
+                extracted_paths: summary.extracted_paths,
             };
             let _ = on_progress.send(ProgressEvent::Finished { summary: dto.clone() });
             Ok(dto)
@@ -646,19 +656,10 @@ pub struct PendingOpenDto {
 /// 打开系统"默认应用"设置页（ms-settings:defaultapps），供前端引导设默认程序。
 #[tauri::command]
 pub async fn open_default_apps_settings() -> Result<(), String> {
-    // Windows：ms-settings:defaultapps 深链。
-    // 跨平台兜底：opener 插件打开。
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "ms-settings:defaultapps"])
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = tauri_plugin_opener::open_path("defaultapps", None::<&str>);
-    }
+    // 用 tauri_plugin_opener 打开 URL 协议，跨平台可靠。
+    // Windows 上 opener 会调 ShellExecuteW，正确处理 ms-settings: 深链。
+    tauri_plugin_opener::open_url("ms-settings:defaultapps", None::<&str>)
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -787,6 +788,18 @@ pub async fn file_size(path: String) -> Result<u64, String> {
     Ok(std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0))
 }
 
+/// 删除源文件（解压/压缩完成后按设置删除原文件）。静默忽略失败。
+#[tauri::command]
+pub async fn delete_source(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if p.is_file() {
+        let _ = std::fs::remove_file(p);
+    } else if p.is_dir() {
+        let _ = std::fs::remove_dir_all(p);
+    }
+    Ok(())
+}
+
 /// 按扩展名返回图片 MIME 类型。
 fn mime_by_ext(path: &str) -> &'static str {
     let lower = path.to_ascii_lowercase();
@@ -803,4 +816,19 @@ fn mime_by_ext(path: &str) -> &'static str {
     } else {
         "application/octet-stream"
     }
+}
+
+/// 取消时清理 dest 中已提交的残留文件。
+/// 逐条删除文件，空目录也一并清理。静默忽略删除失败（文件可能被占用）。
+fn cleanup_extracted(dest: &std::path::Path, paths: &[String]) {
+    for rel in paths {
+        let full = dest.join(rel);
+        if full.is_dir() {
+            let _ = std::fs::remove_dir(&full);
+        } else if full.is_file() {
+            let _ = std::fs::remove_file(&full);
+        }
+    }
+    // 尝试清理 dest 本身（若已空则删除，非空则保留）。
+    let _ = std::fs::remove_dir(dest);
 }

@@ -95,6 +95,7 @@ pub fn run() {
             commands::pop_pending_open,
             commands::send_feedback,
             commands::file_size,
+            commands::delete_source,
         ]);
 
     // 处理文件关联/右键菜单启动参数：解析动作后缓存到 PENDING_OPEN，

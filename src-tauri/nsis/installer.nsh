@@ -44,6 +44,12 @@
   WriteRegStr HKCU "Software\Classes\Directory\shell\ExtractrCompress" "Position" "Top"
   WriteRegStr HKCU "Software\Classes\Directory\shell\ExtractrCompress" "Icon" "$INSTDIR\Extractr.exe"
   WriteRegStr HKCU "Software\Classes\Directory\shell\ExtractrCompress\command" "" '"$INSTDIR\Extractr.exe" "--compress" "%1"'
+
+  ; 文件右键：用 Extractr 压缩（预填该文件为源）
+  WriteRegStr HKCU "Software\Classes\*\shell\ExtractrCompress" "" "用 Extractr 压缩"
+  WriteRegStr HKCU "Software\Classes\*\shell\ExtractrCompress" "Position" "Top"
+  WriteRegStr HKCU "Software\Classes\*\shell\ExtractrCompress" "Icon" "$INSTDIR\Extractr.exe"
+  WriteRegStr HKCU "Software\Classes\*\shell\ExtractrCompress\command" "" '"$INSTDIR\Extractr.exe" "--compress" "%1"'
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
@@ -65,4 +71,5 @@
 
   DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\ExtractrOpen"
   DeleteRegKey HKCU "Software\Classes\Directory\shell\ExtractrCompress"
+  DeleteRegKey HKCU "Software\Classes\*\shell\ExtractrCompress"
 !macroend

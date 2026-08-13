@@ -1,0 +1,15 @@
+[package]
+name = "archive-core-sys"
+version = "0.1.0"
+edition = "2021"
+description = "archive-core C ABI 导出层（macOS dylib）"
+
+[lib]
+name = "archive_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+archive-core = { path = "../../../crates/archive-core", features = ["rar"] }
+
+[build-dependencies]
+cbindgen = "0.26"

@@ -36,6 +36,7 @@ import type {
   OpenArchiveAction,
 } from "./lib/types";
 import { CompressPanel } from "./components/CompressPanel";
+import { ConvertPanel } from "./components/ConvertPanel";
 
 const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
 
@@ -43,7 +44,7 @@ export default function App() {
   useTheme();
   const { t } = useTranslation();
   const { run } = useExtract();
-  const { create: createArchive } = useExtract();
+  const { create: createArchive, test } = useExtract();
   const settings = useAppStore((s) => s.settings);
   const addRecentDir = useAppStore((s) => s.addRecentDir);
 
@@ -60,6 +61,7 @@ export default function App() {
   // 压缩面板状态提到 App 层：右键压缩 argv 可预填源；解压页不再有浮动按钮。
   const [compressOpen, setCompressOpen] = useState(false);
   const [compressSource, setCompressSource] = useState<string | undefined>();
+  const [convertOpen, setConvertOpen] = useState(false);
   // 首次启动引导：提示用户设 Extractr 为默认程序（仅显示一次）。
   const [showDefaultGuide, setShowDefaultGuide] = useState(
     () => !localStorage.getItem(DEFAULT_GUIDE_KEY)
@@ -256,7 +258,10 @@ export default function App() {
                 <span className="break-all">{describeError(loadError, t)}</span>
               </div>
             )}
-            <ArchivePreview path={file} format={format} entries={entries} loading={loading} />
+            <ArchivePreview path={file} format={format} entries={entries} loading={loading}
+              onConvert={() => setConvertOpen(true)}
+              onTest={file ? () => void test(file, password) : undefined}
+            />
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-zinc-500">
                 {t("dest.label")}
@@ -286,6 +291,13 @@ export default function App() {
             setCompressSource(undefined);
           }}
           initialSource={compressSource}
+        />
+      )}
+      {convertOpen && file && (
+        <ConvertPanel
+          onClose={() => setConvertOpen(false)}
+          source={file}
+          sourceFormat={format}
         />
       )}
       {hovering && (

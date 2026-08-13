@@ -2,12 +2,14 @@ import { invoke, Channel } from "@tauri-apps/api/core";
 import { revealItemInDir, openUrl } from "@tauri-apps/plugin-opener";
 import type {
   ArchiveErrorDto,
+  ConvertRequest,
   CreateRequest,
   EntryDto,
   ExtractRequest,
   ListRequest,
   ProgressEvent,
   SummaryDto,
+  TestRequest,
 } from "./types";
 
 export async function detectFormat(path: string): Promise<string> {
@@ -39,6 +41,26 @@ export async function createArchive(
   const channel = new Channel<ProgressEvent>();
   channel.onmessage = onProgress;
   return invoke<SummaryDto>("create_archive", { req, onProgress: channel });
+}
+
+/** 格式转换：解压源归档再用目标格式重新打包。 */
+export async function convertArchive(
+  req: ConvertRequest,
+  onProgress: (e: ProgressEvent) => void
+): Promise<SummaryDto> {
+  const channel = new Channel<ProgressEvent>();
+  channel.onmessage = onProgress;
+  return invoke<SummaryDto>("convert_archive", { req, onProgress: channel });
+}
+
+/** 测试归档完整性（CRC 校验，不写盘）。 */
+export async function testArchive(
+  req: TestRequest,
+  onProgress: (e: ProgressEvent) => void
+): Promise<SummaryDto> {
+  const channel = new Channel<ProgressEvent>();
+  channel.onmessage = onProgress;
+  return invoke<SummaryDto>("test_archive", { source: req.source, password: req.password, onProgress: channel });
 }
 
 /** 在文件管理器中显示指定路径（所在目录并选中）。 */
@@ -87,6 +109,15 @@ export async function checkUpdate(): Promise<UpdateInfo | null> {
     return await invoke<UpdateInfo | null>("check_update");
   } catch {
     return null;
+  }
+}
+
+/** 删除源文件（解压/压缩完成后按设置删除原文件）。 */
+export async function deleteSource(path: string): Promise<void> {
+  try {
+    await invoke("delete_source", { path });
+  } catch {
+    /* ignore */
   }
 }
 

@@ -4,25 +4,32 @@
       <stop stop-color="#4F46E5"/>
       <stop offset="1" stop-color="#6366F1"/>
     </linearGradient>
-    <linearGradient id="box" x1="48" y1="88" x2="208" y2="216" gradientUnits="userSpaceOnUse">
+    <linearGradient id="letter" x1="60" y1="56" x2="196" y2="200" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E0E7FF"/>
+      <stop offset="1" stop-color="#C7D2FE"/>
     </linearGradient>
   </defs>
   <!-- 圆角背景 -->
   <rect width="256" height="256" rx="56" fill="url(#bg)"/>
-  <!-- 归档箱主体 -->
-  <path d="M48 104 L128 72 L208 104 L208 200 C208 204.418 204.418 208 200 208 L56 208 C51.582 208 48 204.418 48 200 Z" fill="url(#box)"/>
-  <!-- 箱盖 -->
-  <path d="M40 96 L128 64 L216 96 L216 112 C216 114.209 214.209 116 212 116 L44 116 C41.791 116 40 114.209 40 112 Z" fill="#C7D2FE"/>
-  <!-- 拉链头/锁扣（顶部中央） -->
-  <rect x="116" y="44" width="24" height="24" rx="4" fill="#FFFFFF"/>
-  <rect x="120" y="50" width="16" height="4" rx="2" fill="#4F46E5"/>
-  <!-- 拉链齿（竖向） -->
-  <rect x="126" y="68" width="4" height="28" rx="2" fill="#A5B4FC"/>
-  <!-- 箱前标签条 -->
-  <rect x="96" y="148" width="64" height="12" rx="6" fill="#6366F1"/>
-  <rect x="108" y="168" width="40" height="8" rx="4" fill="#A5B4FC"/>
-  <!-- 解压箭头（向上的开口，象征解压） -->
-  <path d="M128 120 L128 140 M120 128 L128 120 L136 128" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- E 字母主体 — 三横杠 + 竖杠，几何化无衬线 -->
+  <path d="
+    M68 56
+    L188 56
+    L188 80
+    L96 80
+    L96 112
+    L172 112
+    L172 136
+    L96 136
+    L96 176
+    L188 176
+    L188 200
+    L68 200
+    Z
+  " fill="url(#letter)"/>
+  <!-- 解压展开箭头 — 从 E 中间横杠向右展开，象征解压/提取 -->
+  <path d="M178 118 L210 128 L178 138" fill="#A5B4FC" opacity="0.9"/>
+  <rect x="160" y="124" width="22" height="8" rx="4" fill="#A5B4FC" opacity="0.9"/>
+  <!-- 底部小标签 — 产品标识线 -->
+  <rect x="88" y="216" width="80" height="6" rx="3" fill="#818CF8" opacity="0.6"/>
 </svg>

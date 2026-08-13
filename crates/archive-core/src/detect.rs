@@ -1,7 +1,7 @@
-//! 格式探测：magic bytes 优先，扩展名兜底。
+//! 格式探测：magic bytes 优先，扩展名兜底。支持分卷重定向。
 
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::ArchiveError;
 use crate::types::ArchiveFormat;
@@ -9,7 +9,24 @@ use crate::types::ArchiveFormat;
 /// 探测归档格式。
 ///
 /// 顺序：magic bytes（对付伪装扩展名） -> TAR 的 `ustar`（偏移 257）-> 扩展名兜底。
+/// 若检测到分卷非首卷，自动重定向到首卷路径。
 pub fn detect_format(path: &Path) -> anyhow::Result<ArchiveFormat> {
+    // 分卷重定向：若传入非首卷，返回首卷路径供调用方替换。
+    // 首卷重定向在 detect 前做，避免打开非首卷读 magic。
+    if let Some(first) = redirect_to_first_volume(path) {
+        // 非首卷 → 用首卷路径继续探测，但调用方需替换 source。
+        // 此处只探测格式，路径替换由 dispatcher 层负责。
+        return detect_format_inner(&first);
+    }
+    detect_format_inner(path)
+}
+
+/// 返回首卷路径（若当前文件是分卷的非首卷）。None 表示非分卷或已是首卷。
+pub fn first_volume_path(path: &Path) -> Option<PathBuf> {
+    redirect_to_first_volume(path)
+}
+
+fn detect_format_inner(path: &Path) -> anyhow::Result<ArchiveFormat> {
     let mut f = std::fs::File::open(path)
         .map_err(|e| anyhow::anyhow!("打开文件失败 {}: {e}", path.display()))?;
     let mut head = [0u8; 512];
@@ -126,5 +143,90 @@ fn compound_ext(path: &Path) -> Option<String> {
             return Some(p.to_string());
         }
     }
+    None
+}
+
+/// 分卷重定向：检测文件名是否为分卷的非首卷，返回首卷路径。
+///
+/// 支持的分卷命名：
+/// - RAR5: `xxx.part02.rar` → `xxx.part01.rar`
+/// - RAR4: `xxx.r01` → `xxx.rar`
+/// - 7z:   `xxx.7z.002` → `xxx.7z.001`
+/// - ZIP:  `xxx.zip.002` → `xxx.zip.001`
+/// - ZIP:  `xxx.z02` → `xxx.zip`
+fn redirect_to_first_volume(path: &Path) -> Option<PathBuf> {
+    let orig_name = path.file_name()?.to_str()?;
+    let lower = orig_name.to_ascii_lowercase();
+    let dir = path.parent()?;
+
+    // RAR5: xxx.partNN.rar (NN > 1) → xxx.part01.rar
+    if lower.ends_with(".rar") {
+        if let Some(idx) = lower.find(".part") {
+            let part_and_ext = &lower[idx..]; // ".part02.rar"
+            let num_part = &part_and_ext[5..part_and_ext.len() - 4]; // "02"
+            if let Ok(n) = num_part.parse::<u32>() {
+                if n > 1 {
+                    let width = num_part.len();
+                    let first_num = format!("{:0width$}", 1, width = width);
+                    let first_name = format!("{}.part{}.rar", &orig_name[..idx], first_num);
+                    let candidate = dir.join(&first_name);
+                    if candidate.exists() {
+                        return Some(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    // RAR4: xxx.rNN (NN > 0) → xxx.rar
+    if lower.len() > 4 {
+        let ext = &lower[lower.len() - 4..];
+        if ext.starts_with(".r") && ext[2..].chars().all(|c| c.is_ascii_digit()) {
+            if let Ok(n) = ext[2..].parse::<u32>() {
+                if n > 0 {
+                    let stem = &orig_name[..orig_name.len() - 4];
+                    let candidate = dir.join(format!("{}.rar", stem));
+                    if candidate.exists() {
+                        return Some(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    // 7z / ZIP 数字分卷: xxx.7z.NNN / xxx.zip.NNN (NNN > 1) → xxx.7z.001 / xxx.zip.001
+    for base in [".7z.", ".zip."] {
+        if let Some(idx) = lower.find(base) {
+            let after_base = &lower[idx + base.len()..];
+            if let Ok(n) = after_base.parse::<u32>() {
+                if n > 1 {
+                    let width = after_base.len();
+                    let first_num = format!("{:0width$}", 1, width = width);
+                    let first_name = format!("{}{}{}", &orig_name[..idx + base.len()], first_num, "");
+                    let candidate = dir.join(&first_name);
+                    if candidate.exists() {
+                        return Some(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    // ZIP 传统分卷: xxx.zNN (NN > 1) → xxx.zip
+    if lower.len() > 4 {
+        let ext = &lower[lower.len() - 4..];
+        if ext.starts_with(".z") && ext[2..].chars().all(|c| c.is_ascii_digit()) {
+            if let Ok(n) = ext[2..].parse::<u32>() {
+                if n > 1 {
+                    let stem = &orig_name[..orig_name.len() - 4];
+                    let candidate = dir.join(format!("{}.zip", stem));
+                    if candidate.exists() {
+                        return Some(candidate);
+                    }
+                }
+            }
+        }
+    }
+
     None
 }

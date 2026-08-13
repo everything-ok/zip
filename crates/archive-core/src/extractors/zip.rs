@@ -9,8 +9,13 @@ use zip::ZipArchive;
 use crate::error::ArchiveError;
 use crate::extractors::copy_stream;
 use crate::safety::{ensure_safe_directory, prepare_output, sanitize_entry_path};
+use crate::split_reader::SplitReader;
 use crate::traits::{ArchiveExtractor, ExtractContext};
 use crate::types::{ArchiveEntry, ArchiveFormat, ExtractSummary};
+
+/// 组合 trait：Read + Seek，用于 trait object。
+trait ReadSeek: std::io::Read + std::io::Seek {}
+impl<T: std::io::Read + std::io::Seek> ReadSeek for T {}
 
 pub struct ZipExtractor;
 
@@ -24,9 +29,9 @@ impl ArchiveExtractor for ZipExtractor {
     }
 
     fn list(&self, path: &Path, _password: Option<&str>) -> anyhow::Result<Vec<ArchiveEntry>> {
-        let file = fs::File::open(path).with_context(|| format!("打开失败: {}", path.display()))?;
+        let reader = self.open_reader(path)?;
         // by_index_raw：不读载荷，无需密码即可列出加密归档条目。
-        let mut zip = ZipArchive::new(file)?;
+        let mut zip = ZipArchive::new(reader)?;
         let mut entries = Vec::with_capacity(zip.len());
         for index in 0..zip.len() {
             let entry = zip.by_index_raw(index)?;
@@ -49,8 +54,8 @@ impl ArchiveExtractor for ZipExtractor {
 
     fn test(&self, ctx: &ExtractContext) -> anyhow::Result<ExtractSummary> {
         // ZIP 测试：遍历读取每个条目到 sink，CRC 不匹配会返回 InvalidCrc。
-        let file = fs::File::open(ctx.source)?;
-        let mut zip = ZipArchive::new(file)?;
+        let reader = self.open_reader(ctx.source)?;
+        let mut zip = ZipArchive::new(reader)?;
         let password = ctx.options.password.as_deref();
         let total = zip.len();
         ctx.options.limits.check_entries(total)?;
@@ -116,6 +121,48 @@ impl ArchiveExtractor for ZipExtractor {
 }
 
 impl ZipExtractor {
+    /// 打开 ZIP 文件读取器。若检测到分卷（.zip.001 或 .z01），用 SplitReader 串联；否则普通 File。
+    fn open_reader(&self, path: &Path) -> anyhow::Result<Box<dyn ReadSeek>> {
+        let lower = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        // .zip.NNN 分卷
+        if lower.contains(".zip.") {
+            if let Some(idx) = lower.find(".zip.") {
+                let after = &lower[idx + 5..];
+                if after.chars().all(|c| c.is_ascii_digit()) && !after.is_empty() {
+                    if let Ok(sr) = SplitReader::from_first_volume(path) {
+                        return Ok(Box::new(sr));
+                    }
+                }
+            }
+        }
+
+        // .zNN 传统分卷：找 .z01 同目录，再找 .zip
+        if lower.len() > 4 {
+            let ext = &lower[lower.len() - 4..];
+            if ext.starts_with(".z") && ext[2..].chars().all(|c| c.is_ascii_digit()) {
+                let dir = path.parent();
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                if let Some(dir) = dir {
+                    let zip_path = dir.join(format!("{}.zip", stem));
+                    if zip_path.exists() {
+                        if let Ok(sr) = SplitReader::from_zip_classic_split(path, &zip_path) {
+                            return Ok(Box::new(sr));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(Box::new(
+            fs::File::open(path).with_context(|| format!("打开失败: {}", path.display()))?,
+        ))
+    }
+
     /// 解压实现，可选 `filter` 限定只解压匹配的归档内路径。
     /// `filter=None` 解压全部；匹配时目录前缀也一并解压以保留结构。
     fn extract_filtered(
@@ -123,8 +170,8 @@ impl ZipExtractor {
         ctx: &ExtractContext,
         filter: Option<&[String]>,
     ) -> anyhow::Result<ExtractSummary> {
-        let file = fs::File::open(ctx.source)?;
-        let mut zip = ZipArchive::new(file)?;
+        let reader = self.open_reader(ctx.source)?;
+        let mut zip = ZipArchive::new(reader)?;
         let password = ctx.options.password.as_deref();
         let total = zip.len();
 

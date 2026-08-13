@@ -70,6 +70,32 @@ export function SettingsPanel({
             </span>
           </label>
         </Row>
+        <Row label={t("settings.deleteAfterExtract")}>
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.deleteAfterExtract}
+              onChange={(e) => setSettings({ deleteAfterExtract: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              {settings.deleteAfterExtract ? t("common.on") : t("common.off")}
+            </span>
+          </label>
+        </Row>
+        <Row label={t("settings.deleteAfterCompress")}>
+          <label className="inline-flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.deleteAfterCompress}
+              onChange={(e) => setSettings({ deleteAfterCompress: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600"
+            />
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+              {settings.deleteAfterCompress ? t("common.on") : t("common.off")}
+            </span>
+          </label>
+        </Row>
       </div>
     </Modal>
   );

@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "com.extractr.app",
+    "vendor": "Extractr",
+    "versionCode": 100000,
+    "versionName": "0.2.5",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

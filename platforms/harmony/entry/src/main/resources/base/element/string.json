@@ -1,0 +1,12 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "Extractr 解压工具" },
+    { "name": "app_name", "value": "Extractr" },
+    { "name": "entry_desc", "value": "Extractr 主界面" },
+    { "name": "compress", "value": "压缩" },
+    { "name": "extract", "value": "解压" },
+    { "name": "cancel", "value": "取消" },
+    { "name": "browse", "value": "浏览" },
+    { "name": "password_placeholder", "value": "该压缩包已加密，请输入密码" }
+  ]
+}
