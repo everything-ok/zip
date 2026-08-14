@@ -3,6 +3,12 @@
     "title": "Extractr",
     "subtitle": "Lightweight Extractor"
   },
+  "menu": {
+    "title": "Help & Feedback",
+    "feedback": "Feedback",
+    "formats": "Formats",
+    "about": "About"
+  },
   "compress": {
     "title": "Compress",
     "addFiles": "Add files",
@@ -36,8 +42,6 @@
   "feedback": {
     "title": "Feedback",
     "hint": "Found a bug or have a suggestion? Fill in the form below.",
-    "email": "Email",
-    "contact": "Contact",
     "description": "Description",
     "descPlaceholder": "Describe the issue or suggestion (max 500 chars)",
     "images": "Images",

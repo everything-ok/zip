@@ -37,6 +37,7 @@ import type {
 } from "./lib/types";
 import { CompressPanel } from "./components/CompressPanel";
 import { ConvertPanel } from "./components/ConvertPanel";
+import { FeedbackModal } from "./components/FeedbackModal";
 
 const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
 
@@ -56,6 +57,7 @@ export default function App() {
   const [askPassword, setAskPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<ArchiveErrorDto | null>(null);
   // 压缩面板状态提到 App 层：右键压缩 argv 可预填源；解压页不再有浮动按钮。
@@ -216,6 +218,7 @@ export default function App() {
           setCompressSource(undefined);
           setCompressOpen(true);
         }}
+        onOpenFeedback={() => setFeedbackOpen(true)}
       />
       {showDefaultGuide && !file && (
         <div className="flex items-center gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-2 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
@@ -331,6 +334,7 @@ export default function App() {
         }}
       />
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
       <ToastContainer />
     </div>
   );

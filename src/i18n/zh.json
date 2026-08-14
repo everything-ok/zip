@@ -3,6 +3,12 @@
     "title": "Extractr",
     "subtitle": "轻量解压工具"
   },
+  "menu": {
+    "title": "帮助与反馈",
+    "feedback": "反馈问题",
+    "formats": "支持格式",
+    "about": "关于"
+  },
   "compress": {
     "title": "压缩",
     "addFiles": "添加文件",
@@ -36,8 +42,6 @@
   "feedback": {
     "title": "反馈问题",
     "hint": "遇到问题或有建议？填写下方表单，我们将收到您的反馈。",
-    "email": "邮箱",
-    "contact": "联系方式",
     "description": "问题描述",
     "descPlaceholder": "请详细描述您遇到的问题或建议（最多500字）",
     "images": "图片",

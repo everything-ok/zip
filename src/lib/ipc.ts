@@ -96,11 +96,7 @@ export async function popPendingOpen(): Promise<PendingOpenDto | null> {
 
 /** 打开系统"默认应用"设置页（引导用户设 Extractr 为默认）。 */
 export async function openDefaultAppsSettings(): Promise<void> {
-  try {
-    await invoke("open_default_apps_settings");
-  } catch {
-    /* ignore */
-  }
+  await openUrl("ms-settings:defaultapps");
 }
 
 /** 检查 GitHub 是否有新版本。 */
