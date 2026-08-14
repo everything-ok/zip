@@ -40,6 +40,7 @@ import { ConvertPanel } from "./components/ConvertPanel";
 import { FeedbackModal } from "./components/FeedbackModal";
 
 const DEFAULT_GUIDE_KEY = "extractr-default-guide-shown";
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 export default function App() {
   useTheme();
@@ -220,7 +221,7 @@ export default function App() {
         }}
         onOpenFeedback={() => setFeedbackOpen(true)}
       />
-      {showDefaultGuide && !file && (
+      {showDefaultGuide && !file && !IS_MAC && (
         <div className="flex items-center gap-3 border-b border-indigo-200 bg-indigo-50 px-5 py-2 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
           <ExternalLink size={15} className="shrink-0" />
           <span className="flex-1">{t("default.guide")}</span>

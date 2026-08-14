@@ -1,0 +1,7 @@
+feat: icon refresh + logo removal + installer cleanup
+
+- Regenerate all icon sizes from src/assets/logo.svg (16x16~256x256, Square series, iOS/Android)
+- Remove logo display from Header top bar
+- Remove logo display from About modal
+- installer.nsh: clean up old right-click menus on install (ExtractrHere/Subdir/Open/Compress)
+- Update NSIS icon cache cleanup flow

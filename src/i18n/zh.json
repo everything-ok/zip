@@ -60,7 +60,7 @@
     "desc": "Extractr 是一款轻量、安全、跨平台的解压工具，支持 ZIP、RAR、7z、TAR 等主流格式。",
     "featureSafe": "安全防护：原子输出、Zip Slip 拦截、解压炸弹防护",
     "featureFormats": "全格式：ZIP / RAR / 7z / TAR / GZIP / BZIP2 / XZ / Zstd",
-    "featureLight": "低占用：基于系统 WebView2，安装包仅数 MB",
+    "featureLight": "低占用：基于系统 WebView，安装包仅数 MB",
     "featureCross": "跨平台：核心为纯 Rust，为 macOS / 鸿蒙预留复用"
   },
   "update": {

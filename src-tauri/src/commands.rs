@@ -653,13 +653,25 @@ pub struct PendingOpenDto {
     pub path: String,
 }
 
-/// 打开系统"默认应用"设置页（ms-settings:defaultapps），供前端引导设默认程序。
+/// 打开系统"默认应用"设置页，供前端引导设默认程序。
+/// Windows: ms-settings:defaultapps
+/// macOS: 系统设置（无精确 deep-link 到默认应用页）
 #[tauri::command]
 pub async fn open_default_apps_settings() -> Result<(), String> {
-    // 用 tauri_plugin_opener 打开 URL 协议，跨平台可靠。
-    // Windows 上 opener 会调 ShellExecuteW，正确处理 ms-settings: 深链。
-    tauri_plugin_opener::open_url("ms-settings:defaultapps", None::<&str>)
-        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    {
+        tauri_plugin_opener::open_url("ms-settings:defaultapps", None::<&str>)
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        tauri_plugin_opener::open_url("x-apple.systempreferences:", None::<&str>)
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        // Linux: 无统一默认应用设置页，静默忽略
+    }
     Ok(())
 }
 

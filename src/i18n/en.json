@@ -60,7 +60,7 @@
     "desc": "Extractr is a lightweight, secure, cross-platform archive extractor supporting ZIP, RAR, 7z, TAR and more.",
     "featureSafe": "Security: atomic output, Zip Slip guard, bomb protection",
     "featureFormats": "Formats: ZIP / RAR / 7z / TAR / GZIP / BZIP2 / XZ / Zstd",
-    "featureLight": "Lightweight: system WebView2, installer only a few MB",
+    "featureLight": "Lightweight: system WebView, installer only a few MB",
     "featureCross": "Cross-platform: pure-Rust core, reusable for macOS / HarmonyOS"
   },
   "update": {

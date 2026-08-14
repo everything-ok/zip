@@ -77,6 +77,43 @@ enum OpenAction {
 /// emit 会丢失；前端 ready 后会调用 `pop_pending_open` 取回。
 static PENDING_OPEN: Mutex<Option<OpenAction>> = Mutex::new(None);
 
+/// macOS 文件关联启动：Apple Events 传递 file:// URL，非 argv。
+/// 将 URL 解析为本地路径后，按扩展名判断动作并缓存到 PENDING_OPEN。
+#[cfg(target_os = "macos")]
+fn handle_opened_urls(urls: &[url::Url]) {
+    use std::path::Path;
+    let archive_exts = [
+        ".zip", ".7z", ".rar", ".tar", ".gz", ".gzip", ".bz2", ".xz",
+        ".zst", ".zstd", ".tgz", ".tbz2", ".tbz", ".txz", ".tzst", ".tzs",
+    ];
+    for url in urls {
+        if url.scheme() == "file" {
+            if let Ok(path) = url.to_file_path() {
+                let path_str = path.to_string_lossy().to_string();
+                let lower = path_str.to_ascii_lowercase();
+                if archive_exts.iter().any(|ext| lower.ends_with(ext)) && Path::new(&path).is_file() {
+                    let action = OpenAction::Open { path: path_str };
+                    if let Ok(mut slot) = PENDING_OPEN.lock() {
+                        *slot = Some(action);
+                    }
+                    // emit 在 setup 阶段处理（见下方）
+                    return;
+                }
+            }
+        }
+    }
+}
+
+/// 缓存首启动作并尝试 emit 到 webview。
+fn cache_and_emit(app: &tauri::App, action: OpenAction) {
+    if let Ok(mut slot) = PENDING_OPEN.lock() {
+        *slot = Some(action.clone());
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.emit("open-archive", action);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default()
@@ -96,29 +133,52 @@ pub fn run() {
             commands::send_feedback,
             commands::file_size,
             commands::delete_source,
+            commands::open_default_apps_settings,
         ]);
 
     // 处理文件关联/右键菜单启动参数：解析动作后缓存到 PENDING_OPEN，
     // 并尝试立即 emit（若 webview 已就绪则直接收到，否则前端 ready 后 pop）。
     builder = builder.setup(|app| {
-        let args: Vec<String> = std::env::args().collect();
-        if let Some(action) = parse_open_action(&args) {
-            // emit 用于 webview 已就绪的直接路径；若未就绪则前端 ready 后 pop 取回。
-            // 始终缓存：若 emit 失败/丢，前端 pop 兜底；若 emit 成功，前端拿到后应 pop 消费并去重。
-            if let Ok(mut slot) = PENDING_OPEN.lock() {
-                *slot = Some(action.clone());
-            }
-            let window = app.get_webview_window("main");
-            if let Some(window) = window {
-                let _ = window.emit("open-archive", action);
+        // Windows / Linux：从 argv 解析启动动作
+        #[cfg(not(target_os = "macos"))]
+        {
+            let args: Vec<String> = std::env::args().collect();
+            if let Some(action) = parse_open_action(&args) {
+                cache_and_emit(app, action);
             }
         }
+        // macOS：argv 不含文件路径，Apple Events 通过 RunEvent::Opened 传递。
+        // setup 阶段无法拿到，需在 run loop 中处理。
+        // 首次启动时若通过 open -a 打开文件，Opened 事件会在 run loop 启动后触发。
         Ok(())
     });
 
     builder = builder.on_window_event(|_window, _event| {});
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running Extractr");
+    // macOS 需用 build + run 模式以接收 RunEvent::Opened (Apple Events 文件关联)
+    #[cfg(target_os = "macos")]
+    {
+        let app = builder.build(tauri::generate_context!()).expect("error while building Extractr");
+        app.run(|app_handle, event| {
+            if let tauri::RunEvent::Opened { urls } = event {
+                handle_opened_urls(&urls);
+                // 尝试 emit 已缓存的动作到 webview
+                if let Ok(slot) = PENDING_OPEN.lock() {
+                    if let Some(action) = slot.clone() {
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.emit("open-archive", action);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Windows / Linux：直接 run
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder
+            .run(tauri::generate_context!())
+            .expect("error while running Extractr");
+    }
 }
