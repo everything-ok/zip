@@ -36,15 +36,15 @@
       "icons/icon.ico"
     ],
     "fileAssociations": [
-      { "ext": ["zip"], "name": "ZIP Archive", "description": "ZIP Archive", "mimeType": "application/zip" },
-      { "ext": ["7z"], "name": "7z Archive", "description": "7z Archive", "mimeType": "application/x-7z-compressed" },
-      { "ext": ["rar"], "name": "RAR Archive", "description": "RAR Archive", "mimeType": "application/x-rar-compressed" },
-      { "ext": ["tar"], "name": "TAR Archive", "description": "TAR Archive", "mimeType": "application/x-tar" },
-      { "ext": ["gz", "gzip"], "name": "GZIP Archive", "description": "GZIP Archive", "mimeType": "application/gzip" },
-      { "ext": ["bz2"], "name": "BZIP2 Archive", "description": "BZIP2 Archive", "mimeType": "application/x-bzip2" },
-      { "ext": ["xz"], "name": "XZ Archive", "description": "XZ Archive", "mimeType": "application/x-xz" },
-      { "ext": ["zst", "zstd"], "name": "Zstandard Archive", "description": "Zstandard Archive", "mimeType": "application/zstd" },
-      { "ext": ["tgz", "tbz2", "txz", "tzst"], "name": "Compressed TAR", "description": "Compressed TAR Archive", "mimeType": "application/gzip" }
+      { "ext": ["zip"], "name": "ZIP Archive", "description": "ZIP Archive", "role": "Viewer", "mimeType": "application/zip", "contentTypes": ["com.pkware.zip-archive"] },
+      { "ext": ["7z"], "name": "7z Archive", "description": "7z Archive", "role": "Viewer", "mimeType": "application/x-7z-compressed", "contentTypes": ["org.7-zip.7z-archive"] },
+      { "ext": ["rar"], "name": "RAR Archive", "description": "RAR Archive", "role": "Viewer", "mimeType": "application/x-rar-compressed", "contentTypes": ["com.rarlab.rar-archive"] },
+      { "ext": ["tar"], "name": "TAR Archive", "description": "TAR Archive", "role": "Viewer", "mimeType": "application/x-tar", "contentTypes": ["public.tar-archive"] },
+      { "ext": ["gz", "gzip"], "name": "GZIP Archive", "description": "GZIP Archive", "role": "Viewer", "mimeType": "application/gzip", "contentTypes": ["org.gnu.gnu-zip-archive"] },
+      { "ext": ["bz2"], "name": "BZIP2 Archive", "description": "BZIP2 Archive", "role": "Viewer", "mimeType": "application/x-bzip2", "contentTypes": ["public.bzip2-archive"] },
+      { "ext": ["xz"], "name": "XZ Archive", "description": "XZ Archive", "role": "Viewer", "mimeType": "application/x-xz", "contentTypes": ["org.tukaani.xz-archive"] },
+      { "ext": ["zst", "zstd"], "name": "Zstandard Archive", "description": "Zstandard Archive", "role": "Viewer", "mimeType": "application/zstd", "contentTypes": ["com.facebook.zstd-archive"] },
+      { "ext": ["tgz", "tbz2", "txz", "tzst"], "name": "Compressed TAR", "description": "Compressed TAR Archive", "role": "Viewer", "mimeType": "application/gzip" }
     ],
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },
@@ -57,105 +57,7 @@
     },
     "macOS": {
       "minimumSystemVersion": "13.0",
-      "infoPlist": {
-        "CFBundleDocumentTypes": [
-          {
-            "CFBundleTypeName": "ZIP Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["com.pkware.zip-archive"]
-          },
-          {
-            "CFBundleTypeName": "7z Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["org.7-zip.7z-archive"]
-          },
-          {
-            "CFBundleTypeName": "RAR Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["com.rarlab.rar-archive"]
-          },
-          {
-            "CFBundleTypeName": "TAR Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["public.tar-archive"]
-          },
-          {
-            "CFBundleTypeName": "GZIP Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["org.gnu.gnu-zip-archive"]
-          },
-          {
-            "CFBundleTypeName": "BZIP2 Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["public.bzip2-archive"]
-          },
-          {
-            "CFBundleTypeName": "XZ Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["org.tukaani.xz-archive"]
-          },
-          {
-            "CFBundleTypeName": "Zstandard Archive",
-            "CFBundleTypeRole": "Viewer",
-            "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["com.facebook.zstd-archive"]
-          }
-        ],
-        "UTImportedTypeDeclarations": [
-          {
-            "UTTypeIdentifier": "org.7-zip.7z-archive",
-            "UTTypeConformsTo": ["public.data", "public.archive"],
-            "UTTypeDescription": "7z Archive",
-            "UTTypeTagSpecification": {
-              "public.filename-extension": ["7z"],
-              "public.mime-type": ["application/x-7z-compressed"]
-            }
-          },
-          {
-            "UTTypeIdentifier": "com.rarlab.rar-archive",
-            "UTTypeConformsTo": ["public.data", "public.archive"],
-            "UTTypeDescription": "RAR Archive",
-            "UTTypeTagSpecification": {
-              "public.filename-extension": ["rar"],
-              "public.mime-type": ["application/x-rar-compressed"]
-            }
-          },
-          {
-            "UTTypeIdentifier": "org.tukaani.xz-archive",
-            "UTTypeConformsTo": ["public.data", "public.archive"],
-            "UTTypeDescription": "XZ Archive",
-            "UTTypeTagSpecification": {
-              "public.filename-extension": ["xz"],
-              "public.mime-type": ["application/x-xz"]
-            }
-          },
-          {
-            "UTTypeIdentifier": "com.facebook.zstd-archive",
-            "UTTypeConformsTo": ["public.data", "public.archive"],
-            "UTTypeDescription": "Zstandard Archive",
-            "UTTypeTagSpecification": {
-              "public.filename-extension": ["zst", "zstd"],
-              "public.mime-type": ["application/zstd"]
-            }
-          },
-          {
-            "UTTypeIdentifier": "public.bzip2-archive",
-            "UTTypeConformsTo": ["public.data", "public.archive"],
-            "UTTypeDescription": "BZIP2 Archive",
-            "UTTypeTagSpecification": {
-              "public.filename-extension": ["bz2"],
-              "public.mime-type": ["application/x-bzip2"]
-            }
-          }
-        ]
-      }
+      "infoPlist": "Info.plist"
     }
   }
 }
