@@ -9,12 +9,12 @@ on:
         description: "Version tag (e.g. v0.2.5)"
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        target: [aarch64-apple-darwin, x86_64-apple-darwin]
     steps:
       - uses: actions/checkout@v4
 
@@ -23,20 +23,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Rust
+      - name: Install Rust stable + aarch64 target
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}
 
       - name: Install frontend deps
         run: npm ci
 
-      - name: Build Tauri app
+      - name: Build Tauri (Apple Silicon)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,9 +42,21 @@ jobs:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: "Extractr ${{ github.event.inputs.version || github.ref_name }}"
           releaseBody: "See assets below."
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
-          args: --target ${{ matrix.target }}
+          args: --target aarch64-apple-darwin
+
+      - name: Build Tauri (Intel)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event.inputs.version || github.ref_name }}
+          releaseName: "Extractr ${{ github.event.inputs.version || github.ref_name }}"
+          releaseBody: "See assets below."
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-apple-darwin
 
   build-windows:
     runs-on: windows-latest
@@ -67,7 +77,7 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      - name: Build Tauri app
+      - name: Build Tauri (Windows)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,5 +85,23 @@ jobs:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: "Extractr ${{ github.event.inputs.version || github.ref_name }}"
           releaseBody: "See assets below."
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
+
+  publish-release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.version || github.ref_name }}"
+          # Find the draft release for this tag and publish it
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq ".[] | select(.tag_name==\"$TAG\" and .draft==true) | .id" | head -1)
+          if [ -n "$RELEASE_ID" ]; then
+            gh api repos/${{ github.repository }}/releases/$RELEASE_ID -X PATCH -f draft=false
+            echo "Published release $RELEASE_ID for tag $TAG"
+          else
+            echo "No draft release found for tag $TAG"
+          fi
