@@ -24,7 +24,6 @@ jobs:
     steps:
       - id: tag
         run: echo "tag=${{ github.event.inputs.version || github.ref_name }}" >> $GITHUB_OUTPUT
-    shell: bash
 
   # =============================================
   # macOS (Apple Silicon)
