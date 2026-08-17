@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dmg-aarch64
-          path: src-tauri/target/${{ vars.BUILD_MODE || 'release' }}/bundle/dmg/*.dmg
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           retention-days: 3
 
   # =============================================
@@ -98,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dmg-x86_64
-          path: src-tauri/target/${{ vars.BUILD_MODE || 'release' }}/bundle/dmg/*.dmg
+          path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
           retention-days: 3
 
   # =============================================
@@ -141,14 +141,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: installer-msi-en
-          path: src-tauri/target/release/bundle/msi/*_en-US.msi
+          path: src-tauri/target/release/bundle/msi/en-US/*.msi
           retention-days: 3
 
       - name: Upload MSI artifact (Chinese)
         uses: actions/upload-artifact@v4
         with:
           name: installer-msi-zh
-          path: src-tauri/target/release/bundle/msi/*_zh-CN.msi
+          path: src-tauri/target/release/bundle/msi/zh-CN/*.msi
           retention-days: 3
 
   # =============================================
