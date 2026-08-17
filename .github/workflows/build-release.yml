@@ -175,48 +175,49 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          # Create a new draft release (don't overwrite existing)
-          TAG="$TAG"
-          BODY="## Extractr $TAG
+          cat <<'RELEASE_BODY' > /tmp/release_body.md
+          ## Extractr $TAG
 
-### 支持平台
-- **Windows 10/11** (x64) - 推荐
-- **macOS 13+** (Apple Silicon / Intel)
+          ### 支持平台
+          - **Windows 10/11** (x64) - 推荐
+          - **macOS 13+** (Apple Silicon / Intel)
 
-### 安装包
+          ### 安装包
 
-#### Windows
-| 类型 | 文件 | 说明 |
-|------|------|------|
-| NSIS 安装包 | *.x64-setup.exe | 推荐，一键安装，自动注册文件关联和右键菜单 |
-| MSI 英文版 | *_en-US.msi | 企业部署 |
-| MSI 简体中文版 | *_zh-CN.msi | 企业部署 |
+          #### Windows
+          | 类型 | 文件 | 说明 |
+          |------|------|------|
+          | NSIS 安装包 | *.x64-setup.exe | 推荐，一键安装，自动注册文件关联和右键菜单 |
+          | MSI 英文版 | *_en-US.msi | 企业部署 |
+          | MSI 简体中文版 | *_zh-CN.msi | 企业部署 |
 
-#### macOS
-| 类型 | 文件 | 说明 |
-|------|------|------|
-| DMG (Apple Silicon) | *aarch64*.dmg | Apple Silicon Mac 推荐 |
-| DMG (Intel) | *x86_64*.dmg | Intel Mac |
+          #### macOS
+          | 类型 | 文件 | 说明 |
+          |------|------|------|
+          | DMG (Apple Silicon) | *aarch64*.dmg | Apple Silicon Mac 推荐 |
+          | DMG (Intel) | *x86_64*.dmg | Intel Mac |
 
-### 支持的压缩格式
-**解压**: ZIP, RAR, 7z, TAR, GZIP, BZIP2, XZ, Zstandard 及所有 `.tar.*` 组合格式
-**创建**: ZIP, 7z, TAR, TAR.GZ, TAR.XZ（均支持密码保护）
+          ### 支持的压缩格式
+          **解压**: ZIP, RAR, 7z, TAR, GZIP, BZIP2, XZ, Zstandard 及所有 \`.tar.*\` 组合格式
+          **创建**: ZIP, 7z, TAR, TAR.GZ, TAR.XZ（均支持密码保护）
 
-### 系统要求
-- Windows 10/11 x64，无需管理员权限
-- macOS 13.0+，Apple Silicon 或 Intel
+          ### 系统要求
+          - Windows 10/11 x64，无需管理员权限
+          - macOS 13.0+，Apple Silicon 或 Intel
 
----
+          ---
 
-*Built from commit \`${{ github.sha }}\`*"
+          *Built from commit \`${{ github.sha }}\`*
+          RELEASE_BODY
 
+          TAG="${{ needs.version.outputs.tag }}"
           gh release create "$TAG" \
             --title "Extractr $TAG" \
             --draft \
-            --notes "$BODY"
+            --notes-from /tmp/release_body.md
 
           # Upload all artifacts
-          find artifacts -type f -name "*.exe" -o -type f -name "*.msi" -o -type f -name "*.dmg" | while read f; do
+          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) | while read f; do
             echo "Uploading: $f"
             gh release upload "$TAG" "$f" --clobber
           done
