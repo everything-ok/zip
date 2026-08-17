@@ -91,8 +91,7 @@ impl ArchiveExtractor for GzExtractor {
         ) {
             Ok(bytes) => {
                 // 压缩比校验：解压后 / 压缩前 超 max_ratio 视为解压炸弹。
-                if compressed_size > 0 {
-                    let ratio = bytes / compressed_size;
+                if let Some(ratio) = bytes.checked_div(compressed_size) {
                     if ratio > ctx.options.limits.max_ratio {
                         // 提交前已超 ratio，拒绝提交，Drop 清理临时文件。
                         return Err(crate::error::ArchiveError::BombDetected {

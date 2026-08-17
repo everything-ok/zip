@@ -409,10 +409,9 @@ fn convert_impl(
     };
     let extract_summary = extractor
         .extract(&ctx)
-        .map_err(|e| {
+        .inspect_err(|_| {
             // 解压失败时清理临时目录，避免残留。
             let _ = std::fs::remove_dir_all(&tmp);
-            e
         })?;
 
     // 解压被取消：不继续创建残缺归档，清理并返回取消。
@@ -423,15 +422,13 @@ fn convert_impl(
 
     // 阶段二：收集临时目录文件作为创建源。
     let mut sources: Vec<archive_core::traits::CreateSource> = Vec::new();
-    collect_sources(&tmp, "", &mut sources).map_err(|e| {
+    collect_sources(&tmp, "", &mut sources).inspect_err(|_| {
         let _ = std::fs::remove_dir_all(&tmp);
-        e
     })?;
 
     // 阶段三：创建目标归档。
-    let creator = creators::creator_for_path(dest).map_err(|e| {
+    let creator = creators::creator_for_path(dest).inspect_err(|_| {
         let _ = std::fs::remove_dir_all(&tmp);
-        e
     })?;
     let create_opts = archive_core::traits::CreateOptions {
         password: dest_password,
@@ -446,9 +443,8 @@ fn convert_impl(
     };
     let summary = creator
         .create(&create_ctx)
-        .map_err(|e| {
+        .inspect_err(|_| {
             let _ = std::fs::remove_dir_all(&tmp);
-            e
         })?;
     let _ = std::fs::remove_dir_all(&tmp);
     Ok(summary)
@@ -689,111 +685,6 @@ fn parse_options(req: &ExtractRequest) -> ExtractOptions {
     }
 }
 
-/// 反馈表单 DTO。
-#[derive(Deserialize)]
-pub struct FeedbackRequest {
-    pub email: String,
-    pub text: String,
-    pub images: Vec<String>,
-    pub video: Option<String>,
-}
-
-/// 发送反馈邮件到 2677989813@qq.com（经 QQ SMTP SSL）。
-#[tauri::command]
-pub async fn send_feedback(req: FeedbackRequest) -> Result<(), String> {
-    use lettre::message::header::ContentType;
-    use lettre::message::{Attachment, Mailbox, MultiPart, SinglePart};
-    use lettre::transport::smtp::client::Tls;
-    use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
-
-    const SMTP_HOST: &str = "smtp.qq.com";
-    const SMTP_PORT: u16 = 465;
-    const FROM_ADDR: &str = "2677989813@qq.com";
-    // QQ 邮箱授权码（用户提供）。运行时取值，避免 const 限制。
-    let smtp_auth = obfstr::obfstr!("afoooapkshwaecba").to_string();
-
-    let body = format!(
-        "反馈邮箱：{}\n\n问题描述：\n{}",
-        req.email, req.text
-    );
-
-    let from_mailbox: Mailbox = Mailbox::new(
-        Some("Extractr".into()),
-        FROM_ADDR
-            .parse()
-            .map_err(|e: lettre::address::AddressError| e.to_string())?,
-    );
-    let reply_mailbox: Mailbox = Mailbox::new(
-        None,
-        req.email
-            .parse()
-            .map_err(|e: lettre::address::AddressError| e.to_string())?,
-    );
-
-    let email = Message::builder()
-        .from(from_mailbox.clone())
-        .reply_to(reply_mailbox)
-        .to(from_mailbox)
-        .subject("Extractr 用户反馈")
-        .multipart({
-            let mut mp = MultiPart::mixed().singlepart(
-                SinglePart::builder()
-                    .header(ContentType::TEXT_PLAIN)
-                    .body(body),
-            );
-
-            for img_path in &req.images {
-                // 图片单文件上限 10MB，防 OOM 与 SMTP 体积超限。
-                if let Ok(meta) = std::fs::metadata(img_path) {
-                    if meta.len() > 10 * 1024 * 1024 {
-                        continue;
-                    }
-                }
-                if let Ok(data) = std::fs::read(img_path) {
-                    let name = std::path::Path::new(img_path)
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("image.png");
-                    // 按扩展名映射 MIME，避免 jpg/gif/webp 被标 image/png。
-                    let mime = mime_by_ext(img_path);
-                    let attachment = Attachment::new(name.to_string())
-                        .body(data, ContentType::parse(&mime).unwrap_or(ContentType::TEXT_PLAIN));
-                    mp = mp.singlepart(attachment);
-                }
-            }
-
-            if let Some(video_path) = &req.video {
-                if let Ok(meta) = std::fs::metadata(video_path) {
-                    if meta.len() <= 30 * 1024 * 1024 {
-                        if let Ok(data) = std::fs::read(video_path) {
-                            let attachment = Attachment::new("video.mp4".to_string())
-                                .body(data, ContentType::parse("video/mp4").unwrap());
-                            mp = mp.singlepart(attachment);
-                        }
-                    }
-                }
-            }
-            mp
-        })
-        .map_err(|e| e.to_string())?;
-
-    use lettre::transport::smtp::client::TlsParameters;
-
-    let tls = Tls::Wrapper(TlsParameters::new(SMTP_HOST.to_string()).map_err(|e| e.to_string())?);
-    let transport = AsyncSmtpTransport::<Tokio1Executor>::relay(SMTP_HOST)
-        .map_err(|e| e.to_string())?
-        .port(SMTP_PORT)
-        .tls(tls)
-        .credentials(lettre::transport::smtp::authentication::Credentials::new(
-            FROM_ADDR.to_string(),
-            smtp_auth,
-        ))
-        .build();
-
-    transport.send(email).await.map_err(|e| e.to_string())?;
-    Ok(())
-}
-
 /// 获取文件大小（供前端反馈表单校验视频体积）。失败返回 0。
 #[tauri::command]
 pub async fn file_size(path: String) -> Result<u64, String> {
@@ -810,24 +701,6 @@ pub async fn delete_source(path: String) -> Result<(), String> {
         let _ = std::fs::remove_dir_all(p);
     }
     Ok(())
-}
-
-/// 按扩展名返回图片 MIME 类型。
-fn mime_by_ext(path: &str) -> &'static str {
-    let lower = path.to_ascii_lowercase();
-    if lower.ends_with(".png") {
-        "image/png"
-    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
-        "image/jpeg"
-    } else if lower.ends_with(".gif") {
-        "image/gif"
-    } else if lower.ends_with(".bmp") {
-        "image/bmp"
-    } else if lower.ends_with(".webp") {
-        "image/webp"
-    } else {
-        "application/octet-stream"
-    }
 }
 
 /// 取消时清理 dest 中已提交的残留文件。

@@ -42,7 +42,7 @@ fn gzip_single_file_extract() {
 fn xz_single_file_extract() {
     let tmp = tempfile::tempdir().unwrap();
     let raw = tmp.path().join("data.bin");
-    std::fs::write(&raw, &vec![0xABu8; 8192]).unwrap();
+    std::fs::write(&raw, vec![0xABu8; 8192]).unwrap();
     let arch = tmp.path().join("data.bin.xz");
     let mut enc = xz2::write::XzEncoder::new(std::fs::File::create(&arch).unwrap(), 6);
     enc.write_all(&vec![0xABu8; 8192]).unwrap();

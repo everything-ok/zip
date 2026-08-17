@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Image as ImageIcon, Video, Send, X, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Video, Mail, X, Send, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { Button, Modal } from "./ui";
 import { basename } from "../lib/format";
 
-const DEFAULT_EMAIL = "2677989813@qq.com";
+const FEEDBACK_EMAIL = "everything-ok@proton.me";
 const MAX_TEXT = 500;
 const MAX_IMAGES = 3;
 const MAX_VIDEO_MB = 30;
@@ -27,8 +27,7 @@ export function FeedbackModal({
   const [text, setText] = useState("");
   const [images, setImages] = useState<FileItem[]>([]);
   const [video, setVideo] = useState<FileItem | null>(null);
-  const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<"idle" | "ok" | "err">("idle");
+  const [result, setResult] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [errMsg, setErrMsg] = useState("");
 
   const addImages = async () => {
@@ -69,19 +68,16 @@ export function FeedbackModal({
       setErrMsg(t("feedback.textRequired"));
       return;
     }
-    setSending(true);
-    setResult("idle");
-    setErrMsg("");
+    const imagePaths = images.map((i) => i.path);
+    const body = imagePaths.length > 0
+      ? `${text}\n\n[Attachments: ${imagePaths.join(", ")}]`
+      : text;
+    const subject = `Extractr Feedback`;
+    const mailto = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("send_feedback", {
-        req: {
-          email: DEFAULT_EMAIL,
-          text,
-          images: images.map((i) => i.path),
-          video: video?.path ?? null,
-        },
-      });
+      setResult("sending");
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(mailto);
       setResult("ok");
       setText("");
       setImages([]);
@@ -89,8 +85,6 @@ export function FeedbackModal({
     } catch (e) {
       setResult("err");
       setErrMsg(String(e));
-    } finally {
-      setSending(false);
     }
   };
 
@@ -196,19 +190,11 @@ export function FeedbackModal({
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={onClose} disabled={sending}>
+              <Button variant="secondary" onClick={onClose}>
                 {t("common.cancel")}
               </Button>
-              <Button onClick={submit} disabled={sending || !text.trim()}>
-                {sending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> {t("feedback.sending")}
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} /> {t("feedback.send")}
-                  </>
-                )}
+              <Button onClick={submit} disabled={result !== "idle" && result !== "err"}>
+                <Mail size={16} /> {t("feedback.send")}
               </Button>
             </div>
           </>

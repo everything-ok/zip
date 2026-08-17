@@ -214,6 +214,102 @@
                 </array>
             </dict>
         </dict>
+        <!-- Compound tar formats: tar.gz / tar.bz2 / tar.xz / tar.zst -->
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.gnu.gnu-zip-tar-archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.tar-archive</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>GZIP-compressed TAR Archive</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>tgz</string>
+                    <string>tar.gz</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/gzip</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.bzip2.tar-archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.tar-archive</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>BZIP2-compressed TAR Archive</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>tbz</string>
+                    <string>tbz2</string>
+                    <string>tar.bz2</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-bzip2</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.tukaani.xz-tar-archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.tar-archive</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>XZ-compressed TAR Archive</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>txz</string>
+                    <string>tar.xz</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/x-xz</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.facebook.zstd-tar-archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.tar-archive</string>
+                <string>public.archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>Zstandard-compressed TAR Archive</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>tzst</string>
+                    <string>tzs</string>
+                    <string>tar.zst</string>
+                    <string>tar.zstd</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/zstd</string>
+                </array>
+            </dict>
+        </dict>
     </array>
 </dict>
 </plist>

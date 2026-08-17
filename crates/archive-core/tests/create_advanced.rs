@@ -12,7 +12,7 @@ fn make_sources(tmp: &tempfile::TempDir) -> Vec<CreateSource> {
     let dir = tmp.path().join("src");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("a.txt"), b"alpha").unwrap();
-    std::fs::write(dir.join("b.bin"), &vec![0x42u8; 4096]).unwrap();
+    std::fs::write(dir.join("b.bin"), vec![0x42u8; 4096]).unwrap();
     vec![
         CreateSource { fs_path: dir.join("a.txt"), archive_path: "a.txt".into() },
         CreateSource { fs_path: dir.join("b.bin"), archive_path: "sub/b.bin".into() },

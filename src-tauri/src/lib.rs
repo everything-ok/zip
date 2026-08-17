@@ -86,20 +86,24 @@ fn handle_opened_urls(urls: &[url::Url]) {
         ".zip", ".7z", ".rar", ".tar", ".gz", ".gzip", ".bz2", ".xz",
         ".zst", ".zstd", ".tgz", ".tbz2", ".tbz", ".txz", ".tzst", ".tzs",
     ];
+    let mut saved_action: Option<OpenAction> = None;
     for url in urls {
         if url.scheme() == "file" {
             if let Ok(path) = url.to_file_path() {
                 let path_str = path.to_string_lossy().to_string();
                 let lower = path_str.to_ascii_lowercase();
                 if archive_exts.iter().any(|ext| lower.ends_with(ext)) && Path::new(&path).is_file() {
-                    let action = OpenAction::Open { path: path_str };
-                    if let Ok(mut slot) = PENDING_OPEN.lock() {
-                        *slot = Some(action);
+                    // 首个匹配文件作为 pending action 供前端预览。
+                    if saved_action.is_none() {
+                        saved_action = Some(OpenAction::Open { path: path_str });
                     }
-                    // emit 在 setup 阶段处理（见下方）
-                    return;
                 }
             }
+        }
+    }
+    if let Some(action) = saved_action {
+        if let Ok(mut slot) = PENDING_OPEN.lock() {
+            *slot = Some(action);
         }
     }
 }
@@ -130,7 +134,6 @@ pub fn run() {
             commands::test_archive,
             commands::check_update,
             commands::pop_pending_open,
-            commands::send_feedback,
             commands::file_size,
             commands::delete_source,
             commands::open_default_apps_settings,

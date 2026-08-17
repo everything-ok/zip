@@ -64,7 +64,7 @@ impl ArchiveCreator for ZipCreator {
             let archive_path = safe.to_string_lossy().to_string();
 
             if *is_dir || src.archive_path.ends_with('/') {
-                writer.add_directory(&archive_path, options.clone())?;
+                writer.add_directory(&archive_path, options)?;
                 summary.entries_extracted += 1;
                 ctx.progress.on_entry_done(index, 0);
                 continue;
@@ -74,7 +74,7 @@ impl ArchiveCreator for ZipCreator {
                 .with_context(|| format!("打开源文件失败: {}", src.fs_path.display()))?;
             // 条目级时间：从源文件元数据取修改时间填入 ZIP options。
             let entry_options = {
-                let mut o = options.clone();
+                let mut o = options;
                 if let Ok(meta) = fs::metadata(&src.fs_path) {
                     if let Ok(mtime) = meta.modified() {
                         if let Ok(dur) = mtime.duration_since(std::time::UNIX_EPOCH) {

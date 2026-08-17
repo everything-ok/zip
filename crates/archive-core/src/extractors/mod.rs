@@ -29,6 +29,7 @@ pub const COPY_BUF: usize = 256 * 1024;
 ///
 /// 超限返回封装为 `io::Error` 的 `ArchiveError::BombDetected` / `FileTooLarge`，
 /// 调用方据此中止并清理临时文件，不会损坏既有目标。
+#[allow(clippy::too_many_arguments)]
 pub fn copy_stream<R: Read, W: Write>(
     mut reader: R,
     mut writer: W,

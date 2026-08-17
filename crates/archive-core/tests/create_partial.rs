@@ -168,7 +168,7 @@ fn tar_does_not_support_partial() {
 fn create_zip_cancellation() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("big.txt");
-    std::fs::write(&src, &vec![0x41; 512 * 1024]).unwrap();
+    std::fs::write(&src, vec![0x41; 512 * 1024]).unwrap();
     let archive_path = tmp.path().join("cancel.zip");
     let sources = vec![CreateSource {
         fs_path: src,

@@ -123,7 +123,7 @@ fn main() -> Result<()> {
         Commands::List { input, password } => {
             let extractor = dispatcher::open(&input)?;
             let entries = extractor.list(&input, password.as_deref())?;
-            println!("{:<8} {:<10} {}", "类型", "大小", "路径");
+            println!("{:<8} {:<10} 路径", "类型", "大小");
             for e in entries {
                 let kind = if e.is_dir { "目录" } else { "文件" };
                 println!("{:<8} {:<10} {}", kind, e.size, e.path);

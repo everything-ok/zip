@@ -191,8 +191,7 @@ impl RarExtractor {
     fn resolve_first_volume(&self, path: &Path) -> PathBuf {
         let archive = unrar::Archive::new(path);
         if archive.is_multipart() {
-            let first = archive.first_part();
-            first.into()
+            archive.first_part()
         } else {
             path.to_path_buf()
         }
