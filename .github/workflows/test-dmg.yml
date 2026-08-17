@@ -3,8 +3,8 @@ name: Test DMG Version
 on:
   workflow_dispatch:
     inputs:
-      dmg_url:
-        description: "DMG 下载 URL (留空使用 latest release)"
+      tag:
+        description: "Release tag to test (e.g. v0.2.5)"
         required: false
         default: ""
 
@@ -27,14 +27,21 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
 
-      - name: Test archive-core (all formats)
+      - name: Get release tag
+        id: tag
         run: |
-          cargo test --workspace --all-features -- --nocapture 2>&1 | head -200
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --repo everything-ok/zip --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Test archive-core (all formats)
+        run: cargo test --workspace --all-features -- --nocapture 2>&1 | head -200
         working-directory: crates/archive-core
 
       - name: Test with RAR support
-        run: |
-          cargo test --workspace --features rar 2>&1 | head -100
+        run: cargo test --workspace --features rar 2>&1 | head -100
         working-directory: crates/archive-core
 
   # =============================================
@@ -47,27 +54,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get latest release info
-        id: release
+      - name: Get release tag
+        id: tag
         run: |
-          TAG=$(gh release list --repo everything-ok/zip --limit 1 --json tagName --jq '.[0].tagName')
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --repo everything-ok/zip --limit 1 --json tagName --jq '.[0].tagName')
+          fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Downloading from: https://github.com/everything-ok/zip/releases/download/$TAG/Extractr_0.2.5_aarch64.dmg"
 
       - name: Download DMG
         run: |
-          curl -L -o Extractr.dmg \
-            "https://github.com/everything-ok/zip/releases/download/${{ steps.release.outputs.tag }}/Extractr_0.2.5_aarch64.dmg"
-          ls -la Extractr.dmg
+          curl -L -o Extractr_aarch64.dmg \
+            "https://github.com/everything-ok/zip/releases/download/${{ steps.tag.outputs.tag }}/Extractr_${{ steps.tag.outputs.tag }}_aarch64.dmg" || \
+          curl -L -o Extractr_aarch64.dmg \
+            "https://github.com/everything-ok/zip/releases/download/${{ steps.tag.outputs.tag }}/Extractr_0.2.5_aarch64.dmg"
+          ls -la Extractr_aarch64.dmg
 
       - name: Verify DMG integrity
         run: |
-          file Extractr.dmg
-          hdiutil imageinfo Extractr.dmg
+          file Extractr_aarch64.dmg
+          hdiutil imageinfo Extractr_aarch64.dmg
 
       - name: Mount DMG
         run: |
-          hdiutil attach Extractr.dmg -mountpoint /Volumes/Extractr -nobrowse
+          hdiutil attach Extractr_aarch64.dmg -mountpoint /Volumes/Extractr -nobrowse
           ls -la /Volumes/Extractr/
 
       - name: Verify app bundle
@@ -88,22 +99,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get latest release info
-        id: release
+      - name: Get release tag
+        id: tag
         run: |
-          TAG=$(gh release list --repo everything-ok/zip --limit 1 --json tagName --jq '.[0].tagName')
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --repo everything-ok/zip --limit 1 --json tagName --jq '.[0].tagName')
+          fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Download DMG
         run: |
-          curl -L -o Extractr.dmg \
-            "https://github.com/everything-ok/zip/releases/download/${{ steps.release.outputs.tag }}/Extractr_0.2.5_x64.dmg"
-          ls -la Extractr.dmg
+          curl -L -o Extractr_x64.dmg \
+            "https://github.com/everything-ok/zip/releases/download/${{ steps.tag.outputs.tag }}/Extractr_${{ steps.tag.outputs.tag }}_x64.dmg" || \
+          curl -L -o Extractr_x64.dmg \
+            "https://github.com/everything-ok/zip/releases/download/${{ steps.tag.outputs.tag }}/Extractr_0.2.5_x64.dmg"
+          ls -la Extractr_x64.dmg
 
       - name: Verify DMG integrity
         run: |
-          file Extractr.dmg
-          hdiutil imageinfo Extractr.dmg
+          file Extractr_x64.dmg
+          hdiutil imageinfo Extractr_x64.dmg
 
   # =============================================
   # 功能测试报告
