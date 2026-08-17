@@ -226,11 +226,14 @@ jobs:
           *Built from commit \`${{ github.sha }}\`*
           RELEASE_BODY
 
+          # heredoc 用引号定界 → $TAG 保持字面量；写完替换为实际版本号。
+          sed -i "s/\$TAG/$TAG/g" /tmp/release_body.md
+
           TAG="${{ needs.version.outputs.tag }}"
           gh release create "$TAG" \
             --title "Extractr $TAG" \
             --draft \
-            --notes-from /tmp/release_body.md
+            --notes-file /tmp/release_body.md
 
           # Upload all artifacts
           find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) | while read f; do
