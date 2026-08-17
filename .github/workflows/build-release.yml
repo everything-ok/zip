@@ -56,6 +56,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug bundle output
+        run: |
+          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +98,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug bundle output
+        run: |
+          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
@@ -129,6 +137,10 @@ jobs:
         run: npm run tauri -- build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug bundle output
+        run: |
+          echo "=== Checking bundle directory ===" && dir /s /b src-tauri\target\release\bundle 2>nul || echo "No bundle dir found in release" && echo "=== Checking all target subdirs ===" && dir /s /b src-tauri\target\release 2>nul | findstr /i "\.exe \.msi" || echo "No exe/msi found in release"
 
       - name: Upload NSIS artifact
         uses: actions/upload-artifact@v4
