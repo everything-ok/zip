@@ -58,7 +58,7 @@ jobs:
 
       - name: Debug bundle output
         run: |
-          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null
+          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found in src-tauri/target" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null || echo "No bundle dirs found" && echo "=== Target tree (first 30 lines) ===" && find src-tauri/target -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) 2>/dev/null | head -30 || true
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
@@ -100,7 +100,7 @@ jobs:
 
       - name: Debug bundle output
         run: |
-          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null
+          echo "=== Checking bundle directory ===" && find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found in src-tauri/target" && echo "=== All bundle dirs ===" && find src-tauri/target -type d -name "bundle" 2>/dev/null || echo "No bundle dirs found" && echo "=== Target tree (first 30 lines) ===" && find src-tauri/target -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) 2>/dev/null | head -30 || true
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
