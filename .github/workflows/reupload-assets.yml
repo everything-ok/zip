@@ -1,0 +1,51 @@
+name: Reupload Release Assets
+
+# 从已成功的 v0.2.8 Build and Release 运行（run-id 32019077667）下载产物，
+# 上传到已发布的 v0.2.8 release。create-release job 的 download-artifact
+# 未拿到产物导致 assets 为空，这里用 run-id 跨 run 下载补救。
+on:
+  push:
+    paths:
+      - ".github/workflows/reupload-assets.yml"
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build and Release run id with artifacts"
+        required: false
+        default: "32019077667"
+      tag:
+        description: "Release tag to upload to"
+        required: false
+        default: "v0.2.8"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  reupload:
+    name: Download artifacts & upload to release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts from build run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.inputs.run_id || '32019077667' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: find artifacts -type f | sort
+
+      - name: Upload assets to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || 'v0.2.8' }}
+        run: |
+          echo "Uploading to release $TAG ..."
+          find artifacts -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" \) | while read f; do
+            echo "Uploading: $f"
+            gh release upload "$TAG" "$f" --clobber --repo ${{ github.repository }}
+          done
+          echo "Done. Assets now:"
+          gh release view "$TAG" --repo ${{ github.repository }} --json assets --jq '.assets[].name'
