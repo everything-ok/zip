@@ -1,0 +1,37 @@
+name: Publish Draft Release
+
+# 自触发：本文件被推送到 main 时运行，用 CI 内置 GITHUB_TOKEN 把已存在的
+# draft release 发布为公开 release。无需本地 gh CLI / token。
+# 也支持 workflow_dispatch 手动指定版本。
+on:
+  push:
+    paths:
+      - ".github/workflows/publish-draft.yml"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag to publish (e.g. v0.2.8)"
+        required: false
+        default: "v0.2.8"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish draft release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: echo "tag=${{ github.event.inputs.version || 'v0.2.8' }}" >> $GITHUB_OUTPUT
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          echo "Publishing draft release $TAG ..."
+          gh release view "$TAG" --repo ${{ github.repository }} --json tagName,isDraft,name,assets --jq '{tag:.tagName, draft:.isDraft, name:.name, assets:[.assets[].name]}'
+          gh release edit "$TAG" --draft=false --repo ${{ github.repository }}
+          echo "Published: https://github.com/${{ github.repository }}/releases/tag/$TAG"
