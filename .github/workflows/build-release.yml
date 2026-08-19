@@ -132,24 +132,45 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debug bundle output
-        run: find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found"
+        run: |
+          echo "--- src-tauri/target tree ---"
+          find src-tauri/target -name "*.dmg" 2>/dev/null || true
+          echo "--- workspace target tree ---"
+          find target -name "*.dmg" 2>/dev/null || true
+          echo "--- full bundle dirs ---"
+          find src-tauri/target -path "*bundle*" -type d 2>/dev/null || true
+          find target -path "*bundle*" -type d 2>/dev/null || true
 
       - name: Upload DMG to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          # Tauri 产物路径因构建目录布局而异：可能是 src-tauri/target（独立 crate）
-          # 或 workspace 根 target（被 npm run tauri 顶层调用时）。双路径搜索兜底。
+          # 产物路径因布局而异：src-tauri/target（独立 crate）或 workspace 根 target。
+          # 用 glob 而非 find 管道，规避 set -e + pipefail 在目录缺失时提前退出。
+          set +e
+          shopt -s nullglob
+          bases=(
+            "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg"
+            "target/aarch64-apple-darwin/release/bundle/dmg"
+          )
           found=0
-          for base in src-tauri/target/aarch64-apple-darwin/release/bundle/dmg target/aarch64-apple-darwin/release/bundle/dmg; do
-            find "$base" -name "*.dmg" -type f 2>/dev/null | while read f; do
+          for base in "${bases[@]}"; do
+            [ -d "$base" ] || continue
+            for f in "$base"/*.dmg; do
+              [ -f "$f" ] || continue
               echo "Uploading: $f"
-              gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+              if ! gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"; then
+                echo "ERROR: upload failed for $f"
+                exit 1
+              fi
+              found=1
             done
-            [ -d "$base" ] && found=1
           done
-          [ "$found" -eq 0 ] && { echo "No DMG bundle dir found"; exit 1; }
+          if [ "$found" -eq 0 ]; then
+            echo "ERROR: No DMG found in any bundle dir"
+            exit 1
+          fi
 
   # =============================================
   # macOS (Intel)
@@ -183,23 +204,43 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debug bundle output
-        run: find src-tauri/target -name "*.dmg" 2>/dev/null || echo "No DMG found"
+        run: |
+          echo "--- src-tauri/target tree ---"
+          find src-tauri/target -name "*.dmg" 2>/dev/null || true
+          echo "--- workspace target tree ---"
+          find target -name "*.dmg" 2>/dev/null || true
+          echo "--- full bundle dirs ---"
+          find src-tauri/target -path "*bundle*" -type d 2>/dev/null || true
+          find target -path "*bundle*" -type d 2>/dev/null || true
 
       - name: Upload DMG to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          # 双路径搜索：src-tauri/target（独立 crate）或 workspace 根 target。
+          set +e
+          shopt -s nullglob
+          bases=(
+            "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg"
+            "target/x86_64-apple-darwin/release/bundle/dmg"
+          )
           found=0
-          for base in src-tauri/target/x86_64-apple-darwin/release/bundle/dmg target/x86_64-apple-darwin/release/bundle/dmg; do
-            find "$base" -name "*.dmg" -type f 2>/dev/null | while read f; do
+          for base in "${bases[@]}"; do
+            [ -d "$base" ] || continue
+            for f in "$base"/*.dmg; do
+              [ -f "$f" ] || continue
               echo "Uploading: $f"
-              gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+              if ! gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"; then
+                echo "ERROR: upload failed for $f"
+                exit 1
+              fi
+              found=1
             done
-            [ -d "$base" ] && found=1
           done
-          [ "$found" -eq 0 ] && { echo "No DMG bundle dir found"; exit 1; }
+          if [ "$found" -eq 0 ]; then
+            echo "ERROR: No DMG found in any bundle dir"
+            exit 1
+          fi
 
   # =============================================
   # Windows (NSIS + MSI)
