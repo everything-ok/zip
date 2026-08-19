@@ -139,10 +139,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" -type f | while read f; do
-            echo "Uploading: $f"
-            gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+          # Tauri 产物路径因构建目录布局而异：可能是 src-tauri/target（独立 crate）
+          # 或 workspace 根 target（被 npm run tauri 顶层调用时）。双路径搜索兜底。
+          found=0
+          for base in src-tauri/target/aarch64-apple-darwin/release/bundle/dmg target/aarch64-apple-darwin/release/bundle/dmg; do
+            find "$base" -name "*.dmg" -type f 2>/dev/null | while read f; do
+              echo "Uploading: $f"
+              gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+            done
+            [ -d "$base" ] && found=1
           done
+          [ "$found" -eq 0 ] && { echo "No DMG bundle dir found"; exit 1; }
 
   # =============================================
   # macOS (Intel)
@@ -183,10 +190,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          find src-tauri/target/x86_64-apple-darwin/release/bundle/dmg -name "*.dmg" -type f | while read f; do
-            echo "Uploading: $f"
-            gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+          # 双路径搜索：src-tauri/target（独立 crate）或 workspace 根 target。
+          found=0
+          for base in src-tauri/target/x86_64-apple-darwin/release/bundle/dmg target/x86_64-apple-darwin/release/bundle/dmg; do
+            find "$base" -name "*.dmg" -type f 2>/dev/null | while read f; do
+              echo "Uploading: $f"
+              gh release upload "$TAG" "$f" --clobber --repo "$GITHUB_REPOSITORY"
+            done
+            [ -d "$base" ] && found=1
           done
+          [ "$found" -eq 0 ] && { echo "No DMG bundle dir found"; exit 1; }
 
   # =============================================
   # Windows (NSIS + MSI)
@@ -228,9 +241,18 @@ jobs:
           TAG: ${{ needs.version.outputs.tag }}
         shell: pwsh
         run: |
+          # 双路径搜索：src-tauri/target（独立 crate）或 workspace 根 target。
+          $bases = @("src-tauri/target/release/bundle", "target/release/bundle")
           $files = @()
-          $files += Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe" -ErrorAction SilentlyContinue
-          $files += Get-ChildItem -Path "src-tauri/target/release/bundle/msi" -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue
+          foreach ($base in $bases) {
+            $files += Get-ChildItem -Path "$base/nsis" -Filter "*.exe" -ErrorAction SilentlyContinue
+            $files += Get-ChildItem -Path "$base/msi" -Filter "*.msi" -Recurse -ErrorAction SilentlyContinue
+          }
+          $files = $files | Sort-Object FullName -Unique
+          if ($files.Count -eq 0) {
+            Write-Host "No installer bundle dir found"
+            exit 1
+          }
           foreach ($f in $files) {
             Write-Host "Uploading: $($f.FullName)"
             gh release upload "$env:TAG" "$($f.FullName)" --clobber --repo "$env:GITHUB_REPOSITORY"

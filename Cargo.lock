@@ -116,7 +116,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "archive-cli"
-version = "0.2.5"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "archive-core",
@@ -126,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "archive-core"
-version = "0.2.5"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "bzip2",
@@ -1299,7 +1299,7 @@ dependencies = [
 
 [[package]]
 name = "extractr"
-version = "0.2.5"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "archive-core",
