@@ -30,6 +30,12 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 
 [target.'cfg(target_os = "macos")'.dependencies]
 url = "2"
+# Finder 右键 Service（NSServices）：objc2 已被 tao/tauri 间接拉入，
+# 这里显式声明以在 src-tauri 直接使用 define_class! + AppKit API。
+objc2 = "0.6.4"
+objc2-foundation = { version = "0.3.2", features = ["NSURL", "NSString", "NSArray", "NSError", "NSDictionary", "NSObjCRuntime"] }
+objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSPasteboard", "NSPasteboardItem", "NSWorkspace", "NSRunningApplication"] }
+block2 = "0.6.2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["sync", "macros", "rt"] }

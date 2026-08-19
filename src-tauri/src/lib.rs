@@ -5,6 +5,9 @@ pub mod commands;
 pub mod events;
 pub mod state;
 
+#[cfg(target_os = "macos")]
+pub mod services;
+
 use std::sync::Mutex;
 
 use tauri::{Emitter, Manager};
@@ -66,7 +69,7 @@ fn parse_open_action(args: &[String]) -> Option<OpenAction> {
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase", tag = "action")]
-enum OpenAction {
+pub(crate) enum OpenAction {
     Open { path: String },
     ExtractHere { path: String },
     ExtractToSubdir { path: String },
@@ -75,7 +78,7 @@ enum OpenAction {
 
 /// 缓存首启动作：文件关联/右键启动时 webview 可能尚未加载完成，
 /// emit 会丢失；前端 ready 后会调用 `pop_pending_open` 取回。
-static PENDING_OPEN: Mutex<Option<OpenAction>> = Mutex::new(None);
+pub(crate) static PENDING_OPEN: Mutex<Option<OpenAction>> = Mutex::new(None);
 
 /// macOS 文件关联启动：Apple Events 传递 file:// URL，非 argv。
 /// 将 URL 解析为本地路径后，按扩展名判断动作并缓存到 PENDING_OPEN。
@@ -142,17 +145,21 @@ pub fn run() {
     // 处理文件关联/右键菜单启动参数：解析动作后缓存到 PENDING_OPEN，
     // 并尝试立即 emit（若 webview 已就绪则直接收到，否则前端 ready 后 pop）。
     builder = builder.setup(|app| {
-        // Windows / Linux：从 argv 解析启动动作
-        #[cfg(not(target_os = "macos"))]
+        // 全平台：argv 解析启动动作。
+        // Windows/Linux 走 argv；macOS `open -a Extractr --args --extract-here <path>`
+        // 同样走 argv（之前 macOS setup 未解析，本次补上）。
         {
             let args: Vec<String> = std::env::args().collect();
             if let Some(action) = parse_open_action(&args) {
                 cache_and_emit(app, action);
             }
         }
-        // macOS：argv 不含文件路径，Apple Events 通过 RunEvent::Opened 传递。
-        // setup 阶段无法拿到，需在 run loop 中处理。
-        // 首次启动时若通过 open -a 打开文件，Opened 事件会在 run loop 启动后触发。
+        // macOS：注册 Finder 右键 Service provider（需主线程）。
+        // setup 在主线程跑。注册后用户在 Finder 右键 Services 可见 3 项。
+        #[cfg(target_os = "macos")]
+        {
+            services::register_services_provider(app.handle().clone());
+        }
         Ok(())
     });
 

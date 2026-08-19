@@ -311,5 +311,32 @@
             </dict>
         </dict>
     </array>
+    <key>NSServices</key>
+    <array>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict><key>default</key><string>用 Extractr 解压到当前目录</string></dict>
+            <key>NSMessage</key>
+            <string>extractHere:userData:error:</string>
+            <key>NSSendTypes</key>
+            <array><string>public.file-url</string></array>
+        </dict>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict><key>default</key><string>用 Extractr 解压到子目录</string></dict>
+            <key>NSMessage</key>
+            <string>extractToSubdir:userData:error:</string>
+            <key>NSSendTypes</key>
+            <array><string>public.file-url</string></array>
+        </dict>
+        <dict>
+            <key>NSMenuItem</key>
+            <dict><key>default</key><string>用 Extractr 压缩</string></dict>
+            <key>NSMessage</key>
+            <string>compress:userData:error:</string>
+            <key>NSSendTypes</key>
+            <array><string>public.file-url</string></array>
+        </dict>
+    </array>
 </dict>
 </plist>
