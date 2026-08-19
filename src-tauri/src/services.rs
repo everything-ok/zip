@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject, NSObject};
-use objc2::{define_class, msg_send, ClassType, MainThreadMarker};
+use objc2::{define_class, msg_send, ClassType, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSApplication, NSPasteboard};
 use objc2_foundation::{NSArray, NSError, NSString, NSURL};
 use tauri::{AppHandle, Emitter, Manager};
